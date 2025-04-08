@@ -36,3 +36,19 @@
     transform: rotate(360deg);
   }
 }
+
+
+/* toastStyles.css */
+.toast-custom {
+  font-size: 0.9rem; /* Default font size */
+  padding: 8px 12px;
+  min-height: 40px;
+}
+
+@media (max-width: 480px) {
+  .toast-custom {
+    font-size: 0.75rem; /* Smaller font on mobile */
+    padding: 6px 10px;
+    min-height: 36px;
+  }
+}
