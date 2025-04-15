@@ -1,7 +1,9 @@
+//frontend 
+
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getUserSession, setUserSession } from '../auth';
-import { database, ref, get } from '../firebase';
+import { database, ref, get, set } from '../firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const SoftwareCard = ({ software }) => {
@@ -13,6 +15,9 @@ const SoftwareCard = ({ software }) => {
   const [mobileNumber, setMobileNumber] = useState('');
   const [mobileInfo, setMobileInfo] = useState(null);
   const [mobileError, setMobileError] = useState('');
+  const [mobileConfirmed, setMobileConfirmed] = useState(false);
+  const [showActivateView, setShowActivateView] = useState(false);
+  const [walletPoints, setWalletPoints] = useState(0);
 
   const handleBuyClick = () => {
     const userId = getUserSession();
@@ -31,6 +36,18 @@ const SoftwareCard = ({ software }) => {
       }
     }
   };
+
+  useEffect(() => {
+    const userId = getUserSession();
+    if (userId) {
+      const walletRef = ref(database, `users/${userId}/walletPoints`);
+      get(walletRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          setWalletPoints(snapshot.val());
+        }
+      });
+    }
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -69,21 +86,101 @@ const SoftwareCard = ({ software }) => {
     setMobileInfo(null);
     setMobileError('');
     try {
-      const snapshot = await get(ref(database, `Users/ExpertSkill/${mobileNumber}`));
-      const data = snapshot.val();
-      if (data) {
+      const res = await fetch(`http://localhost:5050/api/check-number/${mobileNumber}`);
+      const data = await res.json();
+
+      if (res.ok && data.imei) {
         setMobileInfo({
-          imei: data.IMEI || 'Not available',
-          insDate: data.InsDate || 'Not available',
+          imei: data.imei || 'Not available',
+          insDate: data.insDate || 'Not available',
           status: data.status || 'Unknown',
         });
+        setMobileConfirmed(true);
       } else {
-        setMobileError('Please install the app.');
+        setMobileError(data.message || 'Please install the app.');
       }
     } catch (err) {
-      setMobileError('Something went wrong.');
+      setMobileError('Something went wrong. Try again.');
     }
   };
+
+  const handleCourseDone = async () => {
+    const userId = getUserSession();
+    if (!userId || !mobileNumber) {
+      alert("Missing user or mobile number.");
+      return;
+    }
+  
+    const courseName = software.name; // exact name for course node
+    const courseType = getCourseType(software.name);
+  
+    try {
+      // Check if this specific course is already activated
+      const courseCheckRef = ref(database, `Users/ExpertSkill/${mobileNumber}/Premium Course/${courseName}`);
+      const courseSnap = await get(courseCheckRef);
+  
+      if (courseSnap.exists()) {
+        alert("Course is already activated for this number.");
+        return;
+      }
+  
+      // Proceed with course activation
+      const res = await fetch("http://localhost:5050/api/activate-course", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, mobileNumber, courseType }),
+      });
+  
+      const data = await res.json();
+  
+      if (res.ok && data.success) {
+        const newBalance = walletPoints - (software.discountedPrice || software.originalPrice || 499);
+        await set(ref(database, `users/${userId}/walletPoints`), newBalance);
+        setWalletPoints(newBalance);
+  
+        alert("Course activated successfully!");
+        setShowNumberPopup(false);
+        setShowActivateView(false);
+        setMobileConfirmed(false);
+      } else {
+        alert(data.message || "Activation failed. Try again.");
+      }
+    } catch (error) {
+      console.error("Error activating:", error);
+      alert("Something went wrong. Please try later.");
+    }
+  };
+  
+  // Helper function to get course type from course name
+  const getCourseType = (courseName) => {
+    if (courseName.toLowerCase().includes("android")) {
+      return "android";
+    } else if (courseName.toLowerCase().includes("brain")) {
+      return "brain";
+    } else if (courseName.toLowerCase().includes("career development course part-ii")) {
+      return "career2";
+    } else if (courseName.toLowerCase().includes("career development course part-i")) {
+      return "career1";
+    } else if (courseName.toLowerCase().includes("foundation development course")) {
+      return "foundation";
+    } else if (courseName.toLowerCase().includes("skill development course")) {
+      return "skill";
+    } else if (courseName.toLowerCase().includes("basic")) {
+      return "basic";
+    } else if (courseName.toLowerCase().includes("computer")) {
+      return "computer";
+    } else {
+      return "english";
+    }
+  };
+  
+  
+  
+  
+  
+  
+  
+  
 
   return (
     <>
@@ -134,6 +231,7 @@ const SoftwareCard = ({ software }) => {
           </motion.button>
         </div>
       </motion.div>
+      
 
       {/* Login Modal */}
       <AnimatePresence>
@@ -232,20 +330,45 @@ const SoftwareCard = ({ software }) => {
                 onClick={checkMobileNumber}
                 className="w-full bg-blue-500 text-white py-2 rounded-full text-sm font-semibold hover:bg-blue-600"
               >
-                Submit
+                Check Now
               </button>
 
               {mobileError && (
                 <p className="text-red-600 mt-3 text-sm text-center">{mobileError}</p>
               )}
 
-              {mobileInfo && (
-                <div className="mt-4 text-sm text-gray-700 bg-gray-100 p-3 rounded-md space-y-1">
-                  <p><strong>IMEI:</strong> {mobileInfo.imei}</p>
-                  <p><strong>Installation Date:</strong> {mobileInfo.insDate}</p>
-                  <p><strong>Status:</strong> {mobileInfo.status}</p>
+{mobileConfirmed && !showActivateView && (
+  <>
+   <button
+  onClick={() => setShowActivateView(true)}
+  className="mt-4 w-full py-2 rounded-full text-sm font-semibold bg-green-500 text-white hover:bg-green-600 transition"
+>
+  Activate Now
+</button>
+
+    {walletPoints < (software.discountedPrice || software.originalPrice || 499) && (
+      <p className="text-red-500 text-sm mt-2 text-center">
+        Not enough balance. Please recharge your wallet.
+      </p>
+    )}
+  </>
+)}
+
+
+              {showActivateView && (
+                <div className="mt-6 text-sm text-gray-800 space-y-3 bg-gray-100 p-4 rounded-xl">
+                  <p><strong>Price:</strong> ₹{software.discountedPrice || 499}</p>
+                  <p><strong>Date:</strong> {new Date().toLocaleDateString('en-GB')}</p>
+                  <p><strong>Videos:</strong> 50</p>
+                  <button
+                    onClick={handleCourseDone}
+                    className="w-full mt-4 bg-blue-600 text-white py-2 rounded-full text-sm font-semibold hover:bg-blue-700"
+                  >
+                    Done
+                  </button>
                 </div>
               )}
+
             </motion.div>
           </>
         )}

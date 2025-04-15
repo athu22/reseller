@@ -2,7 +2,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Home, UserPlus, User, MoreVertical } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearUserSession, getUserSession } from '../auth';
-import { ref, get, set, database } from '../firebase';
+import { ref, get, set, database, onValue } from '../firebase';
 import Wallet from './Wallet';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -12,6 +12,7 @@ const MainLayout = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletPoints, setWalletPoints] = useState(0);
+  const [animateWallet, setAnimateWallet] = useState(false);
 
   const userId = getUserSession();
 
@@ -20,25 +21,27 @@ const MainLayout = () => {
     navigate('/create-user/1');
   };
 
-  const fetchWalletPoints = async () => {
-    if (userId) {
-      const snapshot = await get(ref(database, 'users/' + userId));
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        setWalletPoints(data.walletPoints || 0);
-      }
-    }
-  };
-
   useEffect(() => {
-    fetchWalletPoints();
+    if (userId) {
+      const walletRef = ref(database, 'users/' + userId + '/walletPoints');
+
+      const unsubscribe = onValue(walletRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const newPoints = snapshot.val();
+          setAnimateWallet(true);
+          setWalletPoints(newPoints);
+          setTimeout(() => setAnimateWallet(false), 800);
+        }
+      });
+
+      return () => unsubscribe();
+    }
   }, [userId]);
 
   const handleRecharge = async (amount) => {
     if (userId) {
       const newBalance = walletPoints + amount;
       await set(ref(database, 'users/' + userId + '/walletPoints'), newBalance);
-      setWalletPoints(newBalance);
     }
   };
 
@@ -56,12 +59,15 @@ const MainLayout = () => {
 
         {userId && (
           <div className="flex items-center gap-4">
-            <button
+            <motion.button
               onClick={() => setWalletOpen(true)}
               className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-1 rounded-full text-sm font-medium shadow hover:brightness-110 transition"
+              animate={animateWallet ? { scale: [1, 1.2, 1], opacity: [1, 0.9, 1] } : {}}
+              transition={{ duration: 0.6 }}
             >
-              💰 {walletPoints} pts
-            </button>
+              💰 {walletPoints} ₹
+            </motion.button>
+
             <div className="relative">
               <button onClick={() => setShowMenu(!showMenu)}>
                 <MoreVertical className="text-gray-600" />
@@ -92,14 +98,13 @@ const MainLayout = () => {
               className="fixed inset-0 bg-black z-40"
               onClick={() => setWalletOpen(false)}
             />
-<motion.div
-  initial={{ y: '100%' }}
-  animate={{ y: '-20%' }}
-  exit={{ y: '100%' }}
-  transition={{ type: 'spring', bounce: 0.2 }}
-  className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl z-50 p-6 max-h-[85vh] overflow-y-auto"
->
-
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: '-20%' }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', bounce: 0.2 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl z-50 p-6 max-h-[85vh] overflow-y-auto"
+            >
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-blue-600">Wallet</h2>
                 <button

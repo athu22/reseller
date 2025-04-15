@@ -31,24 +31,45 @@ const WalletPage = () => {
     fetchPoints();
   }, [userId]);
 
-  const handleRecharge = async () => {
+  const handleRazorpay = async () => {
     const addedPoints = parseInt(amount);
-    if (!isNaN(addedPoints) && addedPoints > 0) {
-      const newPoints = points + addedPoints;
-      try {
-        await update(ref(database, 'users/' + userId), {
-          walletPoints: newPoints
-        });
-        setPoints(newPoints);
-        setAmount('');
-        toast.success(`Wallet recharged with ${addedPoints} points`);
-        navigate(`/activation/${userId}/${softwareId}`);
-      } catch (error) {
-        toast.error('Failed to recharge wallet.');
-      }
-    } else {
+    if (isNaN(addedPoints) || addedPoints <= 0) {
       toast.warning('Please enter a valid recharge amount.');
+      return;
     }
+
+    const options = {
+      key: "rzp_live_GyXbMu1y7DNbpK", // Replace with your Razorpay Key ID
+      amount: addedPoints * 100, // Razorpay works in paisa
+      currency: "INR",
+      name: "Your App Name",
+      description: "Wallet Recharge",
+      handler: async function (response) {
+        try {
+          const newPoints = points + addedPoints;
+          await update(ref(database, 'users/' + userId), {
+            walletPoints: newPoints,
+          });
+          setPoints(newPoints);
+          setAmount('');
+          toast.success(`Recharge successful: ${addedPoints} points added!`);
+          navigate(`/activation/${userId}/${softwareId}`);
+        } catch (err) {
+          toast.error("Failed to update points after payment.");
+        }
+      },
+      prefill: {
+        name: username,
+        email: "", // optional
+        contact: "", // optional
+      },
+      theme: {
+        color: "#F37254",
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
   };
 
   return (
@@ -64,10 +85,10 @@ const WalletPage = () => {
           className="block w-full border px-3 py-2 mb-3 rounded"
         />
         <button
-          onClick={handleRecharge}
+          onClick={handleRazorpay}
           className="bg-yellow-500 px-4 py-2 rounded text-white w-full hover:bg-yellow-600"
         >
-          Recharge
+          Recharge with Razorpay
         </button>
       </UserLayout>
     </div>

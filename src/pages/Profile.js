@@ -6,6 +6,8 @@ import { motion } from 'framer-motion';
 const Profile = () => {
   const [userData, setUserData] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [mobileNumber, setMobileNumber] = useState('');
 
   useEffect(() => {
     const storedUserId = localStorage.getItem('userId');
@@ -18,10 +20,39 @@ const Profile = () => {
       try {
         const snapshot = await get(ref(database, 'users/' + userId));
         if (snapshot.exists()) {
-          setUserData(snapshot.val());
+          const data = snapshot.val();
+          setUserData(data);
+          if (data.mobileNumber) {
+            setMobileNumber(data.mobileNumber);
+            fetchCourseDetails(data.mobileNumber);
+          }
         }
       } catch (err) {
         console.error('Error fetching profile:', err);
+      }
+    };
+
+    const fetchCourseDetails = async (mobile) => {
+      try {
+        const courseRef = ref(database, `Users/ExpertSkill/${mobile}`);
+        const snap = await get(courseRef);
+        if (snap.exists()) {
+          const courseData = snap.val();
+          const courseList = Object.entries(courseData).map(([courseName, details]) => {
+            const subSections = details?.Hindi || {};
+            const totalSections = Object.keys(subSections).length;
+            return {
+              courseName,
+              amount: details.amount,
+              date: details.date,
+              totalSections,
+              sections: subSections
+            };
+          });
+          setCourses(courseList);
+        }
+      } catch (err) {
+        console.error('Error fetching course details:', err);
       }
     };
 
@@ -48,10 +79,14 @@ const Profile = () => {
         <p className="text-sm text-gray-600">Welcome back to your dashboard</p>
         <div className="mt-4 text-lg">
           <span className="font-semibold text-gray-700">Wallet:</span>{' '}
-          <span className="text-green-600 font-bold">{userData.walletPoints} pts</span>
+          <span className="text-green-600 font-bold">{userData.walletPoints || 0} pts</span>
         </div>
+        {mobileNumber && (
+          <p className="text-sm mt-2 text-blue-600">📱 Course Activated For: <strong>{mobileNumber}</strong></p>
+        )}
       </div>
 
+      {/* Show Activated Software */}
       {userData.activatedPlan ? (
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
@@ -74,6 +109,31 @@ const Profile = () => {
         >
           💤 No active plan. Start exploring and activate a software to get started!
         </motion.p>
+      )}
+
+      {/* Show Courses */}
+      {courses.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-blue-600 mb-2">📘 Activated Courses</h3>
+          {courses.map((course, index) => (
+            <div
+              key={index}
+              className="bg-gray-50 border border-blue-100 p-4 mb-4 rounded-xl shadow-sm text-sm"
+            >
+              <p><strong>📚 Course:</strong> {course.courseName}</p>
+              <p><strong>💰 Amount:</strong> ₹{course.amount}</p>
+              <p><strong>📅 Date:</strong> {course.date}</p>
+              <p><strong>🎥 Total Sections:</strong> {course.totalSections}</p>
+              <ul className="mt-2 ml-4 list-disc text-gray-600">
+                {Object.entries(course.sections).map(([sectionName, sec]) => (
+                  <li key={sectionName}>
+                    {sectionName} — Videos: {sec.Value} / {sec.Evalue}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       )}
     </motion.div>
   );
