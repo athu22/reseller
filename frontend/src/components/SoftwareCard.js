@@ -104,6 +104,41 @@ const SoftwareCard = ({ software }) => {
     }
   };
 
+
+  const handleShareLink = async () => {
+    const userId = getUserSession(); // Your session logic
+    if (!userId) {
+      setShowLogin(true);
+      return;
+    }
+  
+    try {
+      const res = await fetch('http://localhost:5050/api/create-payment-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseName: software.name,
+          amount: software.discountedPrice || software.originalPrice || 499,
+          userId,
+          courseId: software.id,
+        }),
+      });
+  
+      const data = await res.json();
+  
+      if (res.ok && data.link) {
+        const shareMessage = `🎓 *${software.name}*\n💸 *Fees:* ₹${software.discountedPrice || software.originalPrice || 499}\n👉 Click to pay and activate:\n${data.link}`;
+        const whatsappURL = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
+        window.open(whatsappURL, '_blank');
+      } else {
+        alert(data.message || 'Could not generate payment link.');
+      }
+    } catch (error) {
+      console.error('Error generating link:', error);
+      alert('Something went wrong.');
+    }
+  };
+
 const handleCourseDone = async () => {
   const userId = getUserSession();
   if (!userId || !mobileNumber) {
@@ -222,6 +257,14 @@ const handleCourseDone = async () => {
               </span>
             </div>
           )}
+
+<motion.button
+  whileTap={{ scale: 0.95 }}
+  onClick={handleShareLink}
+  className="bg-gray-300 text-gray-800 px-3 py-1 rounded-full text-sm font-semibold shadow-sm hover:bg-gray-400 transition-all"
+>
+  Share Link 
+</motion.button>
 
           <motion.button
             whileTap={{ scale: 0.95 }}

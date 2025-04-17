@@ -2,8 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const checkMobileRoute = require('./checkMobileNumber');
 const activateCourseRoute = require('./activateCourse');
-const generateReferralLink = require('./generateReferralLink');
 const profileRoutes = require('./profile');
+
+
 
 
 const app = express();
@@ -17,8 +18,9 @@ app.use(express.json());
 
 app.use('/api', checkMobileRoute);
 app.use('/api', activateCourseRoute);
-app.use('/api', generateReferralLink);
 app.use('/api', profileRoutes);
+app.use('/api/create-payment-link', require('./create-payment-link'));
+app.use('/api', require('./verifyMobileBeforeProceed'));
 
 
 
