@@ -3,6 +3,8 @@ const cors = require('cors');
 const checkMobileRoute = require('./checkMobileNumber');
 const activateCourseRoute = require('./activateCourse');
 const generateReferralLink = require('./generateReferralLink');
+const profileRoutes = require('./profile');
+
 
 const app = express();
 app.use(cors({
@@ -16,6 +18,7 @@ app.use(express.json());
 app.use('/api', checkMobileRoute);
 app.use('/api', activateCourseRoute);
 app.use('/api', generateReferralLink);
+app.use('/api', profileRoutes);
 
 
 

@@ -3,7 +3,7 @@ const admin = require('firebase-admin');
 const router = express.Router();
 
 // Load Firebase service account key
-const serviceAccount = require('./smartalc-b7eec-firebase-adminsdk-39dk5-e162430cfc.json');
+const serviceAccount = require('./smartalc-b7eec-firebase-adminsdk-39dk5-4934640224.json');
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -454,7 +454,16 @@ router.post('/activate-course', async (req, res) => {
     
 
     // Save main course and premium summary
-    await db.ref(coursePath).set(courseData);
+    const courseRef = db.ref(coursePath);
+    const snapshot = await courseRef.once('value');
+    
+    if (snapshot.exists()) {
+      // If the course node exists, return a message indicating the course is already activated
+      return res.json({ success: false, message: 'Course is already activated for this user.' });
+    }
+
+    // Save main course and premium summary if the course does not exist
+    await courseRef.set(courseData);
     await db.ref(`${mobileNumber}/Premium Course`).set(premiumData);
 
     return res.json({ success: true, message: 'Course activated successfully' });
@@ -464,5 +473,10 @@ router.post('/activate-course', async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error during activation' });
   }
 });
+
+
+
+
+
 
 module.exports = router;
