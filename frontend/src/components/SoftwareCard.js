@@ -104,41 +104,6 @@ const SoftwareCard = ({ software }) => {
     }
   };
 
-
-  const handleShareLink = async () => {
-    const userId = getUserSession(); // Your session logic
-    if (!userId) {
-      setShowLogin(true);
-      return;
-    }
-  
-    try {
-      const res = await fetch('http://localhost:5050/api/create-payment-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          courseName: software.name,
-          amount: software.discountedPrice || software.originalPrice || 499,
-          userId,
-          courseId: software.id,
-        }),
-      });
-  
-      const data = await res.json();
-  
-      if (res.ok && data.link) {
-        const shareMessage = `🎓 *${software.name}*\n💸 *Fees:* ₹${software.discountedPrice || software.originalPrice || 499}\n👉 Click to pay and activate:\n${data.link}`;
-        const whatsappURL = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
-        window.open(whatsappURL, '_blank');
-      } else {
-        alert(data.message || 'Could not generate payment link.');
-      }
-    } catch (error) {
-      console.error('Error generating link:', error);
-      alert('Something went wrong.');
-    }
-  };
-
 const handleCourseDone = async () => {
   const userId = getUserSession();
   if (!userId || !mobileNumber) {
@@ -258,13 +223,12 @@ const handleCourseDone = async () => {
             </div>
           )}
 
-
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={handleBuyClick}
             className="mt-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-sm hover:brightness-105 transition-all"
           >
-            Activate
+            {software.name.includes('Course') ? 'Activate' : 'Buy Now'}
           </motion.button>
         </div>
       </motion.div>
@@ -376,19 +340,12 @@ const handleCourseDone = async () => {
 
 {mobileConfirmed && !showActivateView && (
   <>
-    <button
-      onClick={() => setShowActivateView(true)}
-      className="mt-4 w-full py-2 rounded-full text-sm font-semibold bg-green-500 text-white hover:bg-green-600 transition"
-    >
-      Activate Now
-    </button>
-
-    <button
-      onClick={handleShareLink}
-      className="mt-4 w-full py-2 rounded-full text-sm font-semibold bg-green-500 text-white hover:bg-green-600 transition"
-    >
-      Share Link
-    </button>
+   <button
+  onClick={() => setShowActivateView(true)}
+  className="mt-4 w-full py-2 rounded-full text-sm font-semibold bg-green-500 text-white hover:bg-green-600 transition"
+>
+  Activate Now
+</button>
 
     {walletPoints < (software.discountedPrice || software.originalPrice || 499) && (
       <p className="text-red-500 text-sm mt-2 text-center">
