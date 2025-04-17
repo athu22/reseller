@@ -258,20 +258,13 @@ const handleCourseDone = async () => {
             </div>
           )}
 
-<motion.button
-  whileTap={{ scale: 0.95 }}
-  onClick={handleShareLink}
-  className="bg-gray-300 text-gray-800 px-3 py-1 rounded-full text-sm font-semibold shadow-sm hover:bg-gray-400 transition-all"
->
-  Share Link 
-</motion.button>
 
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={handleBuyClick}
             className="mt-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-sm hover:brightness-105 transition-all"
           >
-            {software.name.includes('Course') ? 'Activate' : 'Buy Now'}
+            Activate
           </motion.button>
         </div>
       </motion.div>
@@ -383,12 +376,19 @@ const handleCourseDone = async () => {
 
 {mobileConfirmed && !showActivateView && (
   <>
-   <button
-  onClick={() => setShowActivateView(true)}
-  className="mt-4 w-full py-2 rounded-full text-sm font-semibold bg-green-500 text-white hover:bg-green-600 transition"
->
-  Activate Now
-</button>
+    <button
+      onClick={() => setShowActivateView(true)}
+      className="mt-4 w-full py-2 rounded-full text-sm font-semibold bg-green-500 text-white hover:bg-green-600 transition"
+    >
+      Activate Now
+    </button>
+
+    <button
+      onClick={handleShareLink}
+      className="mt-4 w-full py-2 rounded-full text-sm font-semibold bg-green-500 text-white hover:bg-green-600 transition"
+    >
+      Share Link
+    </button>
 
     {walletPoints < (software.discountedPrice || software.originalPrice || 499) && (
       <p className="text-red-500 text-sm mt-2 text-center">

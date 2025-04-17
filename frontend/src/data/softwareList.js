@@ -22,7 +22,7 @@ const softwareList = [
     description: 'Fluency in English with real conversations',
     image: english,
     originalPrice: 1000,
-    discountedPrice: 499,
+    discountedPrice: 1,
     type: 'course',
   },
   {
@@ -31,7 +31,7 @@ const softwareList = [
     description: 'Learn essential computer skills',
     image: computer,
     originalPrice: 1200,
-    discountedPrice: 499,
+    discountedPrice: 1,
     type: 'course',
   },
   {
@@ -40,7 +40,7 @@ const softwareList = [
     description: 'Learn essential computer skills',
     image: android,
     originalPrice: 1200,
-    discountedPrice: 499,
+    discountedPrice: 1,
     type: 'course',
   },
   {
@@ -58,7 +58,7 @@ const softwareList = [
     description: 'Learn essential computer skills',
     image: Brain,
     originalPrice: 1200,
-    discountedPrice: 499,
+    discountedPrice: 1,
     type: 'course',
   },
   {
@@ -67,7 +67,7 @@ const softwareList = [
     description: 'Learn essential computer skills',
     image: Career1,
     originalPrice: 1200,
-    discountedPrice: 499,
+    discountedPrice: 1,
     type: 'course',
   },
   {
@@ -76,7 +76,7 @@ const softwareList = [
     description: 'Learn essential computer skills',
     image: Career2,
     originalPrice: 1200,
-    discountedPrice: 499,
+    discountedPrice: 1,
     type: 'course',
   },
   {
@@ -85,7 +85,7 @@ const softwareList = [
     description: 'Learn essential computer skills',
     image: Foundation,
     originalPrice: 1200,
-    discountedPrice: 499,
+    discountedPrice: 1,
     type: 'course',
   },
   {
@@ -94,7 +94,7 @@ const softwareList = [
     description: 'Learn essential computer skills',
     image: Skill,
     originalPrice: 1200,
-    discountedPrice: 499,
+    discountedPrice: 1,
     type: 'course',
   },
 ];
