@@ -6,7 +6,6 @@ import WalletPage from './pages/WalletPage';
 // import SoftwareRegistration from './pages/SoftwareRegistration';
 import MainLayout from './components/MainLayout';
 import Profile from './pages/Profile';
-import VerifyNumberAndPay from './pages/VerifyNumberAndPay';
 
 const AppRoutes = () => (
   <BrowserRouter>
@@ -18,7 +17,6 @@ const AppRoutes = () => (
       <Route path="/wallet/:userId" element={<WalletPage />} />
       {/* <Route path="/register/:softwareId" element={<SoftwareRegistration />} /> */}
       <Route path="/profile" element={<Profile />} />
-      <Route path="/verifynumber" element={<VerifyNumberAndPay />} />
 
       </Route>
     </Routes>
