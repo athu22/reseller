@@ -30,8 +30,10 @@ const defaultContent = {
   })),
   packages: Array.from({ length: 6 }).map(() => ({
     name: "Package Name",
+    description:"",
     investment: "-",
     benefit: "-",
+    buyNowLink: "", 
   })),
   benefits: Array.from({ length: 6 }).map(() => ({ name: "" })), // Initialize benefits as objects with a `name` property
   contact: {
@@ -52,14 +54,7 @@ const ViewResellerLandingPage = () => {
   const { userId } = useParams();
 
   useEffect(() => {
-    // Decode the userId from the URL and convert it to Firebase-safe format
-    const decodedEmail = decodeURIComponent(userId);
-    const firebaseSafeEmail = decodedEmail.replace('.', '_'); // Firebase-safe format
-
-    // Create the reference to the correct path in Firebase
-    const contentRef = ref(database, `${firebaseSafeEmail}/landing/`);
-
-    // Fetch data from Firebase
+    const contentRef = ref(database, `users/${userId}/landing/`);
     onValue(contentRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -67,7 +62,7 @@ const ViewResellerLandingPage = () => {
         const benefitsArray = data.benefits
           ? Object.keys(data.benefits).map((key) => data.benefits[key])
           : defaultContent.benefits;
-
+  
         setContent({
           ...defaultContent,
           ...data,
@@ -451,31 +446,47 @@ const ViewResellerLandingPage = () => {
       </section>
   
       {/* Packages Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-8 text-indigo-600">
-            Our Packages
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {(content.packages || []).map((pkg, index) => (
-              <div
-                key={index}
-                className="bg-white p-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+<section className="py-16 bg-white">
+  <div className="container mx-auto px-4">
+    <h2 className="text-3xl font-bold text-center mb-8 text-indigo-600">
+      All Course
+    </h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {(content.packages || []).map((pkg, index) => (
+        <div
+          key={index}
+          className="bg-white p-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+        >
+          <h3 className="text-2xl font-bold text-indigo-600 mb-6 text-center">
+            {pkg.name}
+          </h3>
+          <p className="text-gray-600 mb-4">
+            {pkg.description}
+          </p>
+          <details className="group">
+            <summary className="cursor-pointer text-indigo-500 hover:text-indigo-600">
+              Read More
+            </summary>
+            <div className="mt-4">
+              <p className="text-gray-600 mb-4">
+                <strong>Investment:</strong> {pkg.investment}
+              </p>
+              <p className="text-gray-600">
+                <strong>Benefit:</strong> {pkg.benefit}
+              </p>
+              <button
+                className="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-all duration-300"
+                onClick={() => window.open(pkg.buyNowLink, "_blank")}
               >
-                <h3 className="text-2xl font-bold text-indigo-600 mb-6 text-center">
-                  {pkg.name}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  <strong>Investment:</strong> {pkg.investment}
-                </p>
-                <p className="text-gray-600">
-                  <strong>Benefit:</strong> {pkg.benefit}
-                </p>
-              </div>
-            ))}
-          </div>
+                Buy Now
+              </button>
+            </div>
+          </details>
         </div>
-      </section>
+      ))}
+    </div>
+  </div>
+</section>
   
       {/* Benefits Section */}
       <section className="py-8 bg-gray-50 relative overflow-hidden">

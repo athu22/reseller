@@ -68,12 +68,18 @@ const MainLayout = () => {
               💰 {walletPoints} ₹
             </motion.button>
 
-            <div className="relative">
+            <div className="position-relative top-0 right-0">
               <button onClick={() => setShowMenu(!showMenu)}>
                 <MoreVertical className="text-gray-600" />
               </button>
               {showMenu && (
-                <div className="absolute right-0 mt-2 w-32 bg-white border rounded-xl shadow z-50 overflow-hidden">
+  <div className="absolute right-0 mt-2 w-32 bg-white border rounded-xl shadow z-60 overflow-hidden">
+                      <button
+      onClick={() => navigate(`/editable-page/${userId}`)}
+      className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition"
+    >
+      📄 Landing Page
+    </button>
                   <button
                     onClick={handleLogout}
                     className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition"

@@ -626,7 +626,7 @@
 import React, { useState, useEffect } from "react";
 import { ref, set, onValue } from "firebase/database";
 import { database } from "../firebase"; // Ensure this path is correct
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 
 // Default state structure
 const defaultState = {
@@ -652,9 +652,11 @@ const defaultState = {
     name: "Software Name",
   })),
   packages: Array.from({ length: 6 }).map(() => ({
-    name: "Package Name",
-    investment: "-",
-    benefit: "-",
+    name: "Course Name",
+    description: "",
+    investment: "",
+    benefit: "",
+    buyNowLink: "",
   })),
   benefits: Array.from({ length: 6 }).map(() => ({ name: "" })), // Initialize benefits as objects with a `name` property
   contact: {
@@ -668,13 +670,37 @@ const defaultState = {
   },
 };
 
-const ResellerLandingPage = ({ currentUserEmailNode }) => {
+const ResellerLandingPage = () => {
   const [editableContent, setEditableContent] = useState(defaultState);
   const navigate = useNavigate();
   const location = useLocation();
+  const { userId } = useParams();
+
+  const [user, setUser] = useState({});
+
+  // useEffect(() => {
+  //   const contentRef = ref(database, `${currentUserEmailNode}/landing/`);
+  //   onValue(contentRef, (snapshot) => {
+  //     const data = snapshot.val();
+  //     if (data) {
+  //       // Convert benefits object back to array if necessary
+  //       const benefitsArray = data.benefits
+  //         ? Object.keys(data.benefits).map((key) => data.benefits[key])
+  //         : defaultState.benefits;
+
+  //       setEditableContent({
+  //         ...defaultState,
+  //         ...data,
+  //         software: data.software || defaultState.software,
+  //         packages: data.packages || defaultState.packages,
+  //         benefits: benefitsArray, // Ensure benefits is always an array
+  //       });
+  //     }
+  //   });
+  // }, [currentUserEmailNode]);
 
   useEffect(() => {
-    const contentRef = ref(database, `${currentUserEmailNode}/landing/`);
+    const contentRef = ref(database, `users/${userId}/landing/`);
     onValue(contentRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -682,7 +708,7 @@ const ResellerLandingPage = ({ currentUserEmailNode }) => {
         const benefitsArray = data.benefits
           ? Object.keys(data.benefits).map((key) => data.benefits[key])
           : defaultState.benefits;
-
+  
         setEditableContent({
           ...defaultState,
           ...data,
@@ -692,10 +718,10 @@ const ResellerLandingPage = ({ currentUserEmailNode }) => {
         });
       }
     });
-  }, [currentUserEmailNode]);
+  }, [userId]);
 
   const handleSave = () => {
-    const contentRef = ref(database, `${currentUserEmailNode}/landing/`);
+    const contentRef = ref(database, `users/${userId}/landing/`);
     const contentToSave = {
       ...editableContent,
       benefits: editableContent.benefits.reduce((acc, benefit, index) => {
@@ -709,7 +735,7 @@ const ResellerLandingPage = ({ currentUserEmailNode }) => {
   };
 
   const handleShareLink = () => {
-    const viewUrl = `${window.location.origin}/view-landing`;
+    const viewUrl = `${window.location.origin}/view-landing/${userId}`;
     navigator.clipboard
       .writeText(viewUrl)
       .then(() => alert("View-only link copied to clipboard!"))
@@ -1232,7 +1258,7 @@ const ResellerLandingPage = ({ currentUserEmailNode }) => {
   return (
     <>
       {/* Header */}
-      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-6 shadow-lg sticky top-0 z-50">
+      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-6 shadow-lg sticky top-10 z-40">
         <div className="container mx-auto px-4 flex justify-between items-center">
           {/* Editable Logo */}
           <div className="relative group">
@@ -1456,73 +1482,115 @@ const ResellerLandingPage = ({ currentUserEmailNode }) => {
         </div>
       </section>
 
-      {/* Packages Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-8">All Packages</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {(editableContent.packages || []).map((pkg, index) => (
-              <div
-                key={index}
-                className="bg-white p-8 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
-              >
-                {/* Package Name */}
-                <h3
-                  contentEditable
-                  suppressContentEditableWarning
-                  onBlur={(e) =>
-                    handleTextChange(
-                      `packages[${index}].name`,
-                      e.target.innerText
-                    )
-                  }
-                  className="text-2xl font-bold text-indigo-600 mb-6 cursor-text text-center hover:bg-indigo-100 px-2 rounded transition-colors duration-300"
-                >
-                  {pkg.name || "Enter Package Name"}
-                </h3>
 
-                {/* Investment Amount */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-600 mb-2">
-                    Investment Amount
-                  </label>
-                  <input
-                    type="text"
-                    value={pkg.investment}
-                    onChange={(e) =>
-                      handleTextChange(
-                        `packages[${index}].investment`,
-                        e.target.value
-                      )
-                    }
-                    placeholder="Enter investment amount"
-                    className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
 
-                {/* Benefit Amount */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-600 mb-2">
-                    Benefit Amount
-                  </label>
-                  <input
-                    type="text"
-                    value={pkg.benefit}
-                    onChange={(e) =>
-                      handleTextChange(
-                        `packages[${index}].benefit`,
-                        e.target.value
-                      )
-                    }
-                    placeholder="Enter benefit amount"
-                    className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+{/* Packages Section */}
+<section className="py-16 bg-white">
+  <div className="container mx-auto px-4">
+    <h2 className="text-3xl font-bold text-center mb-8">All Course</h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {(editableContent.packages || []).map((pkg, index) => (
+        <div
+          key={index}
+          className="bg-white p-8 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+        >
+          {/* Course Name */}
+          <h3
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) =>
+              handleTextChange(
+                `packages[${index}].name`,
+                e.target.innerText
+              )
+            }
+            className="text-2xl font-bold text-indigo-600 mb-6 cursor-text text-center hover:bg-indigo-100 px-2 rounded transition-colors duration-300"
+          >
+            {pkg.name || "Enter Course Name"}
+          </h3>
+
+          {/* Course Description */}
+          <textarea
+            value={pkg.description}
+            onChange={(e) =>
+              handleTextChange(`packages[${index}].description`, e.target.value)
+            }
+            placeholder="Enter Course Description"
+            className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 mt-4"
+            rows="3"
+          />
+
+          {/* Read More */}
+{/* Read More */}
+<details className="group">
+  <summary className="cursor-pointer text-indigo-500 hover:text-indigo-600">
+    Read More
+  </summary>
+  <div className="mt-4">
+    <div className="mb-6">
+      <label className="block text-sm font-medium text-gray-600 mb-2">
+        Investment Amount
+      </label>
+      <input
+        type="text"
+        value={pkg.investment}
+        onChange={(e) =>
+          handleTextChange(
+            `packages[${index}].investment`,
+            e.target.value
+          )
+        }
+        placeholder="Enter investment amount"
+        className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+    </div>
+    <div className="mb-6">
+      <label className="block text-sm font-medium text-gray-600 mb-2">
+        Benefit Amount
+      </label>
+      <input
+        type="text"
+        value={pkg.benefit}
+        onChange={(e) =>
+          handleTextChange(
+            `packages[${index}].benefit`,
+            e.target.value
+          )
+        }
+        placeholder="Enter benefit amount"
+        className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+    </div>
+    <div className="mb-6">
+      <label className="block text-sm font-medium text-gray-600 mb-2">
+        Buy Now Link
+      </label>
+      <input
+        type="text"
+        value={pkg.buyNowLink}
+        onChange={(e) =>
+          handleTextChange(
+            `packages[${index}].buyNowLink`,
+            e.target.value
+          )
+        }
+        placeholder="Enter buy now link"
+        className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+    </div>
+    <button
+      className="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-all duration-300"
+      onClick={() => window.open(pkg.buyNowLink, "_blank")}
+    >
+      Buy Now
+    </button>
+  </div>
+</details>
         </div>
-      </section>
+      ))}
+    </div>
+  </div>
+</section>
 
       {/* Benefits Section */}
       <section className="py-8 bg-gray-50 relative overflow-hidden">
@@ -1659,14 +1727,16 @@ const ResellerLandingPage = ({ currentUserEmailNode }) => {
           </div>
 
           {/* Share Link Button */}
-          <div className="fixed bottom-4 right-4 z-50">
-            <button
-              onClick={handleShareLink}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg"
-            >
-              Share Link
-            </button>
-          </div>
+          <div className="absolute  right-4 z-50">
+  <div className="mb-16 md:mb-20 sm:mb-12">
+    <button
+      onClick={handleShareLink}
+      className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg"
+    >
+      Share Link
+    </button>
+  </div>
+</div>
         </div>
       </section>
 

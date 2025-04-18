@@ -17,10 +17,11 @@ const AppRoutes = () => (
       <Route path="/activation/:userId/:softwareId" element={<Activation />} />
       <Route path="/wallet/:userId" element={<WalletPage />} />
       <Route path="/profile" element={<Profile />} />
-      <Route path="/landing" element={<ResellerLandingPage />} />
-      <Route path="/view-landing" element={<ViewResellerLandingPage />} />
+      <Route path="/editable-page/:userId" element={<ResellerLandingPage />} />
+     
 
       </Route>
+      <Route path="/view-landing/:userId" element={<ViewResellerLandingPage />} />
     </Routes>
   </BrowserRouter>
 );
