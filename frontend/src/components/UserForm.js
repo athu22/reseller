@@ -5,12 +5,12 @@ import { setUserSession } from '../auth';
 import { motion } from 'framer-motion';
 
 const UserForm = ({ softwareId }) => {
-  const [form, setForm] = useState({ username: '', password: '' });
+  const [form, setForm] = useState({ username: '', password: '', phone: '' });
   const [userData, setUserData] = useState(null);
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [rechargeAmount, setRechargeAmount] = useState('');
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [loginForm, setLoginForm] = useState({ phone: '', password: '' });
   const [loginError, setLoginError] = useState('');
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [showUserInfo, setShowUserInfo] = useState(true);
@@ -19,25 +19,22 @@ const UserForm = ({ softwareId }) => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
+
+    const phone = loginForm.phone.trim();
+    if (!/^\d{10}$/.test(phone)) {
+      setLoginError('Please enter a valid 10-digit phone number');
+      return;
+    }
+
     try {
-      const snapshot = await get(ref(database, 'users'));
-      const users = snapshot.val() || {};
+      const snapshot = await get(ref(database, `users/${phone}`));
+      const user = snapshot.val();
 
-      let foundId = null;
-      Object.entries(users).forEach(([uid, user]) => {
-        if (
-          user.username === loginForm.username &&
-          user.password === loginForm.password
-        ) {
-          foundId = uid;
-        }
-      });
-
-      if (foundId) {
-        setUserSession(foundId);
+      if (user && user.password === loginForm.password) {
+        setUserSession(phone);
         navigate('/');
       } else {
-        setLoginError('Invalid username or password');
+        setLoginError('Invalid phone number or password');
       }
     } catch (err) {
       setLoginError('Error occurred. Try again.');
@@ -51,35 +48,37 @@ const UserForm = ({ softwareId }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
+  
+    const phone = form.phone.trim();
+    if (!/^\d{10}$/.test(phone)) {
+      alert('Please enter a valid 10-digit phone number.');
+      setLoading(false);
+      return;
+    }
+  
     try {
-      const snapshot = await get(ref(database, 'users'));
-      const users = snapshot.val() || {};
-      let found = null;
-      let foundId = null;
-
-      Object.entries(users).forEach(([uid, user]) => {
-        if (user.username === form.username) {
-          found = user;
-          foundId = uid;
-        }
-      });
-
-      if (found) {
-        setUserData(found);
-        setUserId(foundId);
+      const phoneRef = ref(database, 'users/' + phone);
+      const snapshot = await get(phoneRef);
+  
+      if (snapshot.exists()) {
+        const existingUser = snapshot.val();
+        setUserData(existingUser);
+        setUserId(phone);
         setShowUserInfo(true);
       } else {
-        const newId = Date.now().toString();
         const newUser = {
           username: form.username,
           password: form.password,
+          phone: phone,
           createdAt: new Date().toISOString(),
           softwareId,
           walletPoints: 0,
         };
-        await set(ref(database, 'users/' + newId), newUser);
-        navigate(`/wallet/${newId}?softwareId=${softwareId}`);
+        await set(phoneRef, newUser);
+  
+        // ✅ Redirect to login after successful user creation
+        setIsCreatingUser(false);
+        alert('User created successfully! Please log in.');
       }
     } catch (err) {
       console.error('Error:', err);
@@ -88,13 +87,14 @@ const UserForm = ({ softwareId }) => {
       setLoading(false);
     }
   };
+  
 
   const handleRecharge = async () => {
     const amount = parseInt(rechargeAmount);
     if (!isNaN(amount) && amount > 0 && userId) {
       const newPoints = (userData.walletPoints || 0) + amount;
       await update(ref(database, 'users/' + userId), {
-        walletPoints: newPoints
+        walletPoints: newPoints,
       });
 
       setUserData({ ...userData, walletPoints: newPoints });
@@ -103,13 +103,12 @@ const UserForm = ({ softwareId }) => {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }} 
-      animate={{ opacity: 1, y: 0 }} 
-      transition={{ duration: 0.4 }} 
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
       className="p-4 max-w-md mx-auto"
     >
-
       {!isCreatingUser && (
         <motion.form
           onSubmit={handleLogin}
@@ -120,11 +119,15 @@ const UserForm = ({ softwareId }) => {
           <h2 className="text-xl font-bold mb-4 text-center text-gray-800">🔐 Login</h2>
           {loginError && <p className="text-red-500 text-sm mb-3">{loginError}</p>}
           <input
-            name="username"
-            type="text"
-            placeholder="Username"
-            value={loginForm.username}
-            onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+            name="phone"
+            type="tel"
+            maxLength="10"
+            pattern="[0-9]{10}"
+            placeholder="Mobile Number"
+            value={loginForm.phone}
+            onChange={(e) =>
+              setLoginForm({ ...loginForm, phone: e.target.value.replace(/\D/g, '') })
+            }
             className="w-full border px-4 py-2 mb-3 rounded focus:outline-none"
             required
           />
@@ -170,6 +173,17 @@ const UserForm = ({ softwareId }) => {
             required
           />
           <input
+            name="phone"
+            type="tel"
+            maxLength="10"
+            pattern="[0-9]{10}"
+            placeholder="Mobile Number"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })}
+            className="w-full border px-4 py-2 mb-3 rounded focus:outline-none"
+            required
+          />
+          <input
             name="password"
             type="password"
             placeholder="Password"
@@ -211,7 +225,7 @@ const UserForm = ({ softwareId }) => {
           </button>
 
           <h3 className="text-lg font-bold mb-3 text-green-800">👤 User Info</h3>
-          <p><strong>User ID:</strong> {userId}</p>
+          <p><strong>Phone:</strong> {userId}</p>
           <p><strong>Username:</strong> {userData.username}</p>
           <p><strong>Software ID:</strong> {userData.softwareId || 'None'}</p>
           <p><strong>Wallet Points:</strong> {userData.walletPoints || 0}</p>
