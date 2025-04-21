@@ -124,14 +124,14 @@ const MainLayout = () => {
                   >
                     <button
                       onClick={() => navigate(`/editable-page/${userId}`)}
-                      className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition flex items-center gap-3 border-b border-gray-100"
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition flex items-center gap-3 border-b border-gray-100"
                     >
                       <span className="text-lg">📄</span>
                       <span>Landing Page</span>
                     </button>
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition flex items-center gap-3"
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition flex items-center gap-3"
                     >
                       <span className="text-lg">🚪</span>
                       <span>Logout</span>
