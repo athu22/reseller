@@ -1,10 +1,33 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Home, UserPlus, User, MoreVertical } from 'lucide-react';
+import { Home, UserPlus, User, MoreVertical, ChevronLeft, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearUserSession, getUserSession } from '../auth';
 import { ref, set, database, onValue } from '../firebase';
 import Wallet from './Wallet';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const pageVariants = {
+  initial: {
+    opacity: 0,
+    x: -20,
+  },
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: 0.3,
+      ease: "easeOut"
+    }
+  },
+  exit: {
+    opacity: 0,
+    x: 20,
+    transition: {
+      duration: 0.2,
+      ease: "easeIn"
+    }
+  }
+};
 
 const MainLayout = () => {
   const navigate = useNavigate();
@@ -24,7 +47,6 @@ const MainLayout = () => {
   useEffect(() => {
     if (userId) {
       const walletRef = ref(database, 'users/' + userId + '/walletPoints');
-
       const unsubscribe = onValue(walletRef, (snapshot) => {
         if (snapshot.exists()) {
           const newPoints = snapshot.val();
@@ -33,7 +55,6 @@ const MainLayout = () => {
           setTimeout(() => setAnimateWallet(false), 800);
         }
       });
-
       return () => unsubscribe();
     }
   }, [userId]);
@@ -46,54 +67,84 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-50">
-      {/* Top Bar */}
-      <div className="flex justify-between items-center px-4 py-3 shadow-md bg-white sticky top-0 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 pb-16 md:pb-0">
+      {/* Top Bar - Mobile Optimized */}
+      <div className="flex justify-between items-center px-4 py-3 shadow-lg bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         {location.pathname !== '/' ? (
-          <button onClick={() => navigate(-1)} className="text-blue-600 font-semibold text-lg">
-            ←
-          </button>
+          <motion.button 
+            onClick={() => navigate(-1)} 
+            className="text-blue-600 font-semibold p-2 -ml-2 rounded-full hover:bg-blue-50 transition"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </motion.button>
         ) : (
-          <h1 className="text-xl font-bold text-blue-700 tracking-wide">💻 MyApp</h1>
+          <motion.h1 
+            className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-wide"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            💻 MyApp
+          </motion.h1>
         )}
 
         {userId && (
           <div className="flex items-center gap-4">
             <motion.button
               onClick={() => setWalletOpen(true)}
-              className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-1 rounded-full text-sm font-medium shadow hover:brightness-110 transition"
-              animate={animateWallet ? { scale: [1, 1.2, 1], opacity: [1, 0.9, 1] } : {}}
+              className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 min-w-[100px] flex items-center justify-center gap-2"
+              animate={animateWallet ? { scale: [1, 1.1, 1], opacity: [1, 0.9, 1] } : {}}
               transition={{ duration: 0.6 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              💰 {walletPoints} ₹
+              <span className="text-lg">💰</span>
+              <span>{walletPoints} ₹</span>
             </motion.button>
 
-            <div className="position-relative top-0 right-0">
-              <button onClick={() => setShowMenu(!showMenu)}>
-                <MoreVertical className="text-gray-600" />
-              </button>
-              {showMenu && (
-  <div className="absolute right-0 mt-2 w-32 bg-white border rounded-xl shadow z-60 overflow-hidden">
-                      <button
-      onClick={() => navigate(`/editable-page/${userId}`)}
-      className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition"
-    >
-      📄 Landing Page
-    </button>
-                  <button
-                    onClick={handleLogout}
-                    className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition"
+            <div className="relative">
+              <motion.button 
+                onClick={() => setShowMenu(!showMenu)}
+                className="p-2 -mr-2 rounded-full hover:bg-gray-100 transition"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <MoreVertical className="w-6 h-6 text-gray-600" />
+              </motion.button>
+              <AnimatePresence>
+                {showMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    transition={{ type: "spring", bounce: 0.2 }}
+                    className="absolute right-0 mt-2 w-48 bg-white/90 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-xl z-60 overflow-hidden"
                   >
-                    🚪 Logout
-                  </button>
-                </div>
-              )}
+                    <button
+                      onClick={() => navigate(`/editable-page/${userId}`)}
+                      className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition flex items-center gap-3 border-b border-gray-100"
+                    >
+                      <span className="text-lg">📄</span>
+                      <span>Landing Page</span>
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition flex items-center gap-3"
+                    >
+                      <span className="text-lg">🚪</span>
+                      <span>Logout</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         )}
       </div>
 
-      {/* Wallet Modal */}
+      {/* Wallet Modal - Mobile Optimized */}
       <AnimatePresence>
         {walletOpen && (
           <>
@@ -106,19 +157,21 @@ const MainLayout = () => {
             />
             <motion.div
               initial={{ y: '100%' }}
-              animate={{ y: '-20%' }}
+              animate={{ y: '0%' }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', bounce: 0.2 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl z-50 p-6 max-h-[85vh] overflow-y-auto"
+              className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm rounded-t-2xl shadow-2xl z-50 p-6 max-h-[85vh] overflow-y-auto"
             >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-blue-600">Wallet</h2>
-                <button
-                  className="text-gray-500 hover:text-black text-2xl"
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Wallet</h2>
+                <motion.button
+                  className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition"
                   onClick={() => setWalletOpen(false)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                 >
-                  &times;
-                </button>
+                  <X className="w-6 h-6" />
+                </motion.button>
               </div>
               <Wallet points={walletPoints} onRecharge={handleRecharge} />
             </motion.div>
@@ -127,24 +180,26 @@ const MainLayout = () => {
       </AnimatePresence>
 
       {/* Main Content */}
-      <Outlet />
+      <main className="container mx-auto px-4 py-6">
+        <Outlet />
+      </main>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t flex justify-around items-center py-3 md:hidden z-50">
+      {/* Bottom Navigation - Mobile Optimized */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm shadow-lg border-t border-gray-100 flex justify-around items-center py-3 md:hidden z-50">
         <NavButton
-          icon={<Home size={20} />}
+          icon={<Home size={24} />}
           label="Software"
           active={location.pathname === '/'}
           onClick={() => navigate('/')}
         />
         <NavButton
-          icon={<UserPlus size={20} />}
+          icon={<UserPlus size={24} />}
           label="Create"
           active={location.pathname.startsWith('/create-user')}
           onClick={() => navigate('/create-user/1')}
         />
         <NavButton
-          icon={<User size={20} />}
+          icon={<User size={24} />}
           label="Profile"
           active={location.pathname === '/profile'}
           onClick={() => navigate('/profile')}
@@ -155,15 +210,76 @@ const MainLayout = () => {
 };
 
 const NavButton = ({ icon, label, active, onClick }) => (
-  <button
-    className={`flex flex-col items-center gap-1 text-xs font-medium ${
+  <motion.button
+    className={`flex flex-col items-center gap-1.5 p-2 relative ${
       active ? 'text-blue-600' : 'text-gray-500'
-    } hover:text-blue-700 transition`}
+    } hover:text-blue-700 transition-all duration-200`}
     onClick={onClick}
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
   >
-    {icon}
-    <span>{label}</span>
-  </button>
+    {/* Active Indicator */}
+    {active && (
+      <motion.div
+        layoutId="activeNavIndicator"
+        className="absolute -top-1 w-12 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        transition={{ type: "spring", bounce: 0.3 }}
+      />
+    )}
+
+    {/* Icon Container */}
+    <motion.div
+      className={`p-2 rounded-full ${
+        active ? 'bg-gradient-to-r from-blue-50 to-indigo-50' : 'hover:bg-gray-50'
+      }`}
+      whileHover={{ scale: 1.1, rotate: 5 }}
+      whileTap={{ scale: 0.9 }}
+      animate={{
+        scale: active ? 1.1 : 1,
+        rotate: active ? 5 : 0,
+      }}
+      transition={{ type: "spring", bounce: 0.3 }}
+    >
+      {icon}
+    </motion.div>
+
+    {/* Label */}
+    <motion.span
+      className={`text-xs font-medium ${
+        active ? 'text-blue-600' : 'text-gray-500'
+      }`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ 
+        opacity: 1, 
+        y: 0,
+        scale: active ? 1.1 : 1
+      }}
+      transition={{ duration: 0.2 }}
+    >
+      {label}
+    </motion.span>
+
+    {/* Hover Effect */}
+    <motion.div
+      className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 opacity-0"
+      whileHover={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
+    />
+
+    {/* Active Background Effect */}
+    {active && (
+      <motion.div
+        className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/5 to-indigo-500/5"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+      />
+    )}
+  </motion.button>
 );
 
 export default MainLayout;
