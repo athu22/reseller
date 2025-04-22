@@ -1,10 +1,11 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Home, UserPlus, User, MoreVertical, ChevronLeft, X } from 'lucide-react';
+import { Home, UserPlus, User, MoreVertical, ChevronLeft, X, Wallet as WalletIcon, LogOut, Settings, HelpCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearUserSession, getUserSession } from '../auth';
-import { ref, set, database, onValue } from '../firebase';
+import { ref, set, database, onValue, push } from '../firebase';
 import Wallet from './Wallet';
 import { motion, AnimatePresence } from 'framer-motion';
+import Toast from './Toast';
 
 const pageVariants = {
   initial: {
@@ -36,6 +37,7 @@ const MainLayout = () => {
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletPoints, setWalletPoints] = useState(0);
   const [animateWallet, setAnimateWallet] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const userId = getUserSession();
 
@@ -50,8 +52,8 @@ const MainLayout = () => {
       const unsubscribe = onValue(walletRef, (snapshot) => {
         if (snapshot.exists()) {
           const newPoints = snapshot.val();
-          setAnimateWallet(true);
           setWalletPoints(newPoints);
+          setAnimateWallet(true);
           setTimeout(() => setAnimateWallet(false), 800);
         }
       });
@@ -63,13 +65,29 @@ const MainLayout = () => {
     if (userId) {
       const newBalance = walletPoints + amount;
       await set(ref(database, 'users/' + userId + '/walletPoints'), newBalance);
+      setToast({
+        show: true,
+        message: `Successfully recharged ${amount} points!`,
+        type: 'success'
+      });
+    } else {
+      setToast({
+        show: true,
+        message: 'Please login to recharge',
+        type: 'error'
+      });
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 pb-16 md:pb-0">
-      {/* Top Bar - Mobile Optimized */}
-      <div className="flex justify-between items-center px-4 py-3 shadow-lg bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 pb-16 md:pb-0">
+      {/* Top Bar - Enhanced Design */}
+      <motion.div 
+        className="flex justify-between items-center px-4 py-3 shadow-lg bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-100"
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
         {location.pathname !== '/' ? (
           <motion.button 
             onClick={() => navigate(-1)} 
@@ -81,7 +99,7 @@ const MainLayout = () => {
           </motion.button>
         ) : (
           <motion.h1 
-            className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-wide"
+            className="text-xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent tracking-wide"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
@@ -100,7 +118,7 @@ const MainLayout = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <span className="text-lg">💰</span>
+              <WalletIcon className="w-4 h-4" />
               <span>{walletPoints} ₹</span>
             </motion.button>
 
@@ -126,14 +144,21 @@ const MainLayout = () => {
                       onClick={() => navigate(`/editable-page/${userId}`)}
                       className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition flex items-center gap-3 border-b border-gray-100"
                     >
-                      <span className="text-lg">📄</span>
-                      <span>Landing Page</span>
+                      <Settings className="w-4 h-4 text-blue-600" />
+                      <span>Settings</span>
+                    </button>
+                    <button
+                      onClick={() => navigate('/help')}
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition flex items-center gap-3 border-b border-gray-100"
+                    >
+                      <HelpCircle className="w-4 h-4 text-blue-600" />
+                      <span>Help & Support</span>
                     </button>
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition flex items-center gap-3"
                     >
-                      <span className="text-lg">🚪</span>
+                      <LogOut className="w-4 h-4 text-red-600" />
                       <span>Logout</span>
                     </button>
                   </motion.div>
@@ -142,9 +167,9 @@ const MainLayout = () => {
             </div>
           </div>
         )}
-      </div>
+      </motion.div>
 
-      {/* Wallet Modal - Mobile Optimized */}
+      {/* Wallet Modal - Enhanced Design */}
       <AnimatePresence>
         {walletOpen && (
           <>
@@ -160,10 +185,17 @@ const MainLayout = () => {
               animate={{ y: '0%' }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', bounce: 0.2 }}
-              className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm rounded-t-2xl shadow-2xl z-50 p-6 max-h-[85vh] overflow-y-auto"
+              className="fixed bottom-16 left-0 right-0 bg-white/90 backdrop-blur-sm rounded-t-2xl shadow-2xl z-50 p-6 max-h-[85vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Wallet</h2>
+                <motion.h2 
+                  className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  Wallet
+                </motion.h2>
                 <motion.button
                   className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition"
                   onClick={() => setWalletOpen(false)}
@@ -179,13 +211,33 @@ const MainLayout = () => {
         )}
       </AnimatePresence>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        <Outlet />
-      </main>
+      {/* Toast Notification */}
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ ...toast, show: false })}
+        />
+      )}
 
-      {/* Bottom Navigation - Mobile Optimized */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm shadow-lg border-t border-gray-100 flex justify-around items-center py-3 md:hidden z-50">
+      {/* Main Content - Enhanced Design */}
+      <motion.main 
+        className="container mx-auto px-4 py-6"
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+      >
+        <Outlet />
+      </motion.main>
+
+      {/* Bottom Navigation - Enhanced Design */}
+      <motion.div 
+        className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm shadow-lg border-t border-gray-100 flex justify-around items-center py-3 md:hidden z-50"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
         <NavButton
           icon={<Home size={24} />}
           label="Software"
@@ -204,7 +256,7 @@ const MainLayout = () => {
           active={location.pathname === '/profile'}
           onClick={() => navigate('/profile')}
         />
-      </div>
+      </motion.div>
     </div>
   );
 };

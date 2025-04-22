@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { database, ref, set, get, update } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { setUserSession } from '../auth';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
+import { Github, Mail, Lock, User as UserIcon, ArrowLeft } from 'lucide-react';
 
 const UserForm = ({ softwareId }) => {
   const [form, setForm] = useState({ username: '', password: '', phone: '' });
@@ -22,7 +24,13 @@ const UserForm = ({ softwareId }) => {
 
     const phone = loginForm.phone.trim();
     if (!/^\d{10}$/.test(phone)) {
-      setLoginError('Please enter a valid 10-digit phone number');
+      toast.error('Please enter a valid 10-digit phone number', {
+        icon: '📱',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
+      });
       return;
     }
 
@@ -32,12 +40,31 @@ const UserForm = ({ softwareId }) => {
 
       if (user && user.password === loginForm.password) {
         setUserSession(phone);
+        toast.success('Login successful!', {
+          icon: '👋',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
         navigate('/');
       } else {
-        setLoginError('Invalid phone number or password');
+        toast.error('Invalid phone number or password', {
+          icon: '❌',
+          style: {
+            background: '#EF4444',
+            color: '#fff',
+          },
+        });
       }
     } catch (err) {
-      setLoginError('Error occurred. Try again.');
+      toast.error('Error occurred. Try again.', {
+        icon: '⚠️',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
+      });
     }
   };
 
@@ -51,7 +78,13 @@ const UserForm = ({ softwareId }) => {
   
     const phone = form.phone.trim();
     if (!/^\d{10}$/.test(phone)) {
-      alert('Please enter a valid 10-digit phone number.');
+      toast.error('Please enter a valid 10-digit phone number', {
+        icon: '📱',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
+      });
       setLoading(false);
       return;
     }
@@ -65,6 +98,13 @@ const UserForm = ({ softwareId }) => {
         setUserData(existingUser);
         setUserId(phone);
         setShowUserInfo(true);
+        toast.success('User found!', {
+          icon: '👋',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
       } else {
         const newUser = {
           username: form.username,
@@ -76,18 +116,28 @@ const UserForm = ({ softwareId }) => {
         };
         await set(phoneRef, newUser);
   
-        // ✅ Redirect to login after successful user creation
         setIsCreatingUser(false);
-        alert('User created successfully! Please log in.');
+        toast.success('Account created successfully! Please log in.', {
+          icon: '✅',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
       }
     } catch (err) {
       console.error('Error:', err);
-      alert('Something went wrong!');
+      toast.error('Something went wrong!', {
+        icon: '⚠️',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
+      });
     } finally {
       setLoading(false);
     }
   };
-  
 
   const handleRecharge = async () => {
     const amount = parseInt(rechargeAmount);
@@ -99,162 +149,188 @@ const UserForm = ({ softwareId }) => {
 
       setUserData({ ...userData, walletPoints: newPoints });
       setRechargeAmount('');
+      toast.success('Wallet recharged successfully!', {
+        icon: '💰',
+        style: {
+          background: '#10B981',
+          color: '#fff',
+        },
+      });
     }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="p-4 max-w-md mx-auto"
-    >
-      {!isCreatingUser && (
-        <motion.form
-          onSubmit={handleLogin}
-          className="bg-white p-6 rounded-xl shadow mb-6 border border-gray-100"
-          initial={{ scale: 0.98 }}
-          animate={{ scale: 1 }}
-        >
-          <h2 className="text-xl font-bold mb-4 text-center text-gray-800">🔐 Login</h2>
-          {loginError && <p className="text-red-500 text-sm mb-3">{loginError}</p>}
-          <input
-            name="phone"
-            type="tel"
-            maxLength="10"
-            pattern="[0-9]{10}"
-            placeholder="Mobile Number"
-            value={loginForm.phone}
-            onChange={(e) =>
-              setLoginForm({ ...loginForm, phone: e.target.value.replace(/\D/g, '') })
-            }
-            className="w-full border px-4 py-2 mb-3 rounded focus:outline-none"
-            required
-          />
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={loginForm.password}
-            onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-            className="w-full border px-4 py-2 mb-4 rounded focus:outline-none"
-            required
-          />
-          <button className="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600 transition">
-            Login
-          </button>
-          <p className="text-sm text-center mt-3">
-            Don't have an account?{' '}
-            <span
-              onClick={() => setIsCreatingUser(true)}
-              className="text-blue-600 cursor-pointer underline"
-            >
-              Create a new user
-            </span>
-          </p>
-        </motion.form>
-      )}
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-md"
+      >
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="p-8">
+            <div className="text-center mb-8">
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2 }}
+                className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4"
+              >
+                <Github className="w-8 h-8 text-white" />
+              </motion.div>
+              <h2 className="text-2xl font-bold text-gray-800">
+                {isCreatingUser ? 'Create Account' : 'Sign in to your account'}
+              </h2>
+              <p className="text-gray-600 mt-2">
+                {isCreatingUser ? 'Join our community' : 'Welcome back!'}
+              </p>
+            </div>
 
-      {isCreatingUser && (
-        <motion.form
-          onSubmit={handleSubmit}
-          className="bg-white p-6 rounded-xl shadow mb-6 border border-gray-100"
-          initial={{ scale: 0.98 }}
-          animate={{ scale: 1 }}
-        >
-          <h2 className="text-xl font-bold mb-4 text-center text-gray-800">🧾 Create New User</h2>
-          <input
-            name="username"
-            type="text"
-            placeholder="Username"
-            value={form.username}
-            onChange={handleChange}
-            className="w-full border px-4 py-2 mb-3 rounded focus:outline-none"
-            required
-          />
-          <input
-            name="phone"
-            type="tel"
-            maxLength="10"
-            pattern="[0-9]{10}"
-            placeholder="Mobile Number"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })}
-            className="w-full border px-4 py-2 mb-3 rounded focus:outline-none"
-            required
-          />
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full border px-4 py-2 mb-4 rounded focus:outline-none"
-            required
-          />
-          <button
-            type="submit"
-            className="bg-green-500 text-white px-4 py-2 rounded w-full hover:bg-green-600 transition"
-            disabled={loading}
-          >
-            {loading ? 'Checking...' : 'Create User'}
-          </button>
-          <p className="text-sm text-center mt-3">
-            Already have an account?{' '}
-            <span
-              onClick={() => setIsCreatingUser(false)}
-              className="text-blue-600 cursor-pointer underline"
-            >
-              Back to Login
-            </span>
-          </p>
-        </motion.form>
-      )}
+            <AnimatePresence mode="wait">
+              {!isCreatingUser ? (
+                <motion.form
+                  key="login"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  onSubmit={handleLogin}
+                  className="space-y-4"
+                >
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        name="phone"
+                        type="tel"
+                        maxLength="10"
+                        pattern="[0-9]{10}"
+                        placeholder="Mobile Number"
+                        value={loginForm.phone}
+                        onChange={(e) =>
+                          setLoginForm({ ...loginForm, phone: e.target.value.replace(/\D/g, '') })
+                        }
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
 
-      {userData && showUserInfo && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-green-100 p-5 rounded-lg shadow relative"
-        >
-          <button
-            onClick={() => setShowUserInfo(false)}
-            className="absolute top-2 right-2 text-red-600 text-lg font-bold"
-          >
-            ×
-          </button>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        name="password"
+                        type="password"
+                        placeholder="Password"
+                        value={loginForm.password}
+                        onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                  </div>
 
-          <h3 className="text-lg font-bold mb-3 text-green-800">👤 User Info</h3>
-          <p><strong>Phone:</strong> {userId}</p>
-          <p><strong>Username:</strong> {userData.username}</p>
-          <p><strong>Software ID:</strong> {userData.softwareId || 'None'}</p>
-          <p><strong>Wallet Points:</strong> {userData.walletPoints || 0}</p>
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-4 rounded-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
+                  >
+                    Sign in
+                  </button>
 
-          <div className="mt-4">
-            <input
-              type="number"
-              placeholder="Recharge Amount"
-              value={rechargeAmount}
-              onChange={(e) => setRechargeAmount(e.target.value)}
-              className="w-full border px-3 py-2 mb-3 rounded"
-            />
-            <button
-              onClick={handleRecharge}
-              className="bg-yellow-500 text-white px-4 py-2 rounded w-full hover:bg-yellow-600 transition"
-            >
-              Recharge Wallet
-            </button>
+                  <p className="text-center text-sm text-gray-600">
+                    Don't have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatingUser(true)}
+                      className="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Create one
+                    </button>
+                  </p>
+                </motion.form>
+              ) : (
+                <motion.form
+                  key="signup"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  onSubmit={handleSubmit}
+                  className="space-y-4"
+                >
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <UserIcon className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        name="username"
+                        type="text"
+                        placeholder="Username"
+                        value={form.username}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        name="phone"
+                        type="tel"
+                        maxLength="10"
+                        pattern="[0-9]{10}"
+                        placeholder="Mobile Number"
+                        value={form.phone}
+                        onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        name="password"
+                        type="password"
+                        placeholder="Password"
+                        value={form.password}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-4 rounded-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
+                    disabled={loading}
+                  >
+                    {loading ? 'Creating account...' : 'Create account'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingUser(false)}
+                    className="w-full flex items-center justify-center text-gray-600 hover:text-gray-800"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to sign in
+                  </button>
+                </motion.form>
+              )}
+            </AnimatePresence>
           </div>
-
-          <button
-            onClick={() => navigate(`/activation/${userId}/${softwareId}`)}
-            className="mt-4 bg-purple-500 text-white px-4 py-2 rounded w-full hover:bg-purple-600 transition"
-          >
-            Go to Activation
-          </button>
-        </motion.div>
-      )}
-    </motion.div>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 

@@ -4,6 +4,7 @@ import { getUserSession, setUserSession } from '../auth';
 import { database, ref, get, set } from '../firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { X, Check, ArrowRight, Star, Clock, Users } from 'lucide-react';
 
 const SoftwareCard = ({ software }) => {
   const navigate = useNavigate();
@@ -20,29 +21,10 @@ const SoftwareCard = ({ software }) => {
 
   const handleBuyClick = () => {
     const userId = getUserSession();
-    if (software.name.includes('Course')) {
-      if (userId) {
-        // Check if course exists
-        const courseRef = ref(database, `courses/${software.id}`);
-        get(courseRef).then((snapshot) => {
-          if (snapshot.exists()) {
-            // Course exists, show share button
-            setShowNumberPopup(true);
-          } else {
-            // Course doesn't exist, create it and navigate to edit
-            const courseType = getCourseType(software.name);
-            navigate(`/course-page/${courseType}/${software.id}`);
-          }
-        });
-      } else {
-        setShowLogin(true);
-      }
+    if (userId) {
+      setShowNumberPopup(true);
     } else {
-      if (userId) {
-        navigate(`/activation/${userId}/${software.id}`);
-      } else {
-        setShowLogin(true);
-      }
+      setShowLogin(true);
     }
   };
 
@@ -96,17 +78,42 @@ const SoftwareCard = ({ software }) => {
       const data = await res.json();
 
       if (res.ok && data.imei) {
-        setMobileInfo({
-          imei: data.imei || 'Not available',
-          insDate: data.insDate || 'Not available',
-          status: data.status || 'Unknown',
+        // Number exists in database, activate the course directly
+        const userId = getUserSession();
+        if (!userId) {
+          setMobileError('User session expired. Please login again.');
+          return;
+        }
+
+        const courseType = getCourseType(software.name);
+        const activateRes = await fetch("http://localhost:5050/api/activate-course", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, mobileNumber, courseType }),
         });
-        setMobileConfirmed(true);
+
+        const activateData = await activateRes.json();
+
+        if (activateRes.ok && activateData.success) {
+          // Update wallet points
+          const newBalance = walletPoints - (software.discountedPrice || software.originalPrice || 499);
+          await set(ref(database, `users/${userId}/walletPoints`), newBalance);
+          setWalletPoints(newBalance);
+
+          // Show success message and close popup
+          toast.success('Course activated successfully!');
+          setShowNumberPopup(false);
+          setMobileConfirmed(false);
+          setMobileNumber('');
+        } else {
+          setMobileError(activateData.message || 'Failed to activate course. Please try again.');
+        }
       } else {
-        setMobileError(data.message || 'Please install the app.');
+        setMobileError(data.message || 'Please install the app first.');
       }
     } catch (err) {
-      setMobileError('Something went wrong. Try again.');
+      console.error('Error:', err);
+      setMobileError('Something went wrong. Please try again.');
     }
   };
 
@@ -231,35 +238,72 @@ const SoftwareCard = ({ software }) => {
   return (
     <>
       <motion.div
+        whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="bg-white border rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 flex flex-col w-full max-w-sm mx-auto overflow-hidden"
+        className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col w-full max-w-sm mx-auto overflow-hidden"
       >
-        <div className="relative aspect-video">
+        <div className="relative aspect-video group">
           <img
             src={software.image}
             alt={software.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
 
-        <div className="p-4 flex flex-col gap-3">
-          <motion.h2 className="text-base sm:text-lg font-bold text-blue-700 line-clamp-2">
+        <div className="p-4 sm:p-6 flex flex-col gap-3">
+          <motion.h2 
+            className="text-lg sm:text-xl font-bold text-gray-800 line-clamp-2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
             {software.name}
           </motion.h2>
 
-          <motion.p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
+          <motion.p 
+            className="text-sm sm:text-base text-gray-600 leading-relaxed line-clamp-3"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             {software.description}
           </motion.p>
 
+          <motion.div 
+            className="flex items-center gap-2 mt-2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="flex items-center gap-1 text-yellow-500">
+              <Star className="w-4 h-4 fill-current" />
+              <span className="text-sm font-medium">4.8</span>
+            </div>
+            <div className="flex items-center gap-1 text-gray-500">
+              <Users className="w-4 h-4" />
+              <span className="text-sm">1.2k+ students</span>
+            </div>
+            <div className="flex items-center gap-1 text-gray-500">
+              <Clock className="w-4 h-4" />
+              <span className="text-sm">8 weeks</span>
+            </div>
+          </motion.div>
+
           {software.discountedPrice && (
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-red-600 font-bold text-lg">
+            <motion.div 
+              className="flex items-center gap-2 mt-2"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <span className="text-xl font-bold text-blue-600">
                 ₹{software.discountedPrice}
               </span>
               <span className="line-through text-gray-400 text-sm">
                 ₹{software.originalPrice}
               </span>
-              <span className="text-green-600 text-xs font-medium ml-auto bg-green-100 px-2 py-0.5 rounded">
+              <span className="ml-auto text-green-600 text-xs font-medium bg-green-100 px-2 py-0.5 rounded-full">
                 {Math.round(
                   ((software.originalPrice - software.discountedPrice) /
                     software.originalPrice) *
@@ -267,21 +311,29 @@ const SoftwareCard = ({ software }) => {
                 )}
                 % OFF
               </span>
-            </div>
+            </motion.div>
           )}
 
-          <div className="flex flex-col gap-2 mt-2">
+          <motion.div 
+            className="flex flex-col gap-2 mt-4"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
             <motion.button
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleBuyClick}
-              className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-sm hover:brightness-105 transition-all"
+              className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 flex items-center justify-center gap-2"
             >
               {software.name.includes('Course') ? 'Get Started' : 'Buy Now'}
+              <ArrowRight className="w-4 h-4" />
             </motion.button>
 
             {software.name.includes('Course') && (
               <motion.button
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   const currentUserId = getUserSession();
                   if (!currentUserId) {
@@ -292,15 +344,16 @@ const SoftwareCard = ({ software }) => {
                   const landingPage = getCourseLandingPage(courseType);
                   const viewUrl = `${window.location.origin}/view-${landingPage}/${currentUserId}/${software.id}`;
                   navigator.clipboard.writeText(viewUrl)
-                    .then(() => alert('Course link copied to clipboard!'))
-                    .catch(() => alert('Failed to copy link'));
+                    .then(() => toast.success('Course link copied to clipboard!'))
+                    .catch(() => toast.error('Failed to copy link'));
                 }}
-                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-sm hover:brightness-105 transition-all"
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 flex items-center justify-center gap-2"
               >
                 Share Course Link
+                <ArrowRight className="w-4 h-4" />
               </motion.button>
             )}
-          </div>
+          </motion.div>
         </div>
       </motion.div>
 
@@ -369,7 +422,7 @@ const SoftwareCard = ({ software }) => {
         )}
       </AnimatePresence>
 
-      {/* Mobile Number Input Popup - Mobile Optimized */}
+      {/* Mobile Number Input Popup - Enhanced Design */}
       <AnimatePresence>
         {showNumberPopup && (
           <>
@@ -377,69 +430,207 @@ const SoftwareCard = ({ software }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.4 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
               className="fixed inset-0 bg-black z-40"
               onClick={() => setShowNumberPopup(false)}
             />
             <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: '0%' }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', bounce: 0.2 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-lg z-50 p-4"
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: '0%', opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ 
+                type: 'spring',
+                bounce: 0.3,
+                duration: 0.6
+              }}
+              className="fixed bottom-[80px] left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 p-4 sm:p-6 max-h-[90vh] overflow-y-auto"
             >
-              <h3 className="text-lg font-semibold text-blue-600 mb-4">
-                {mobileConfirmed ? 'Share Course' : 'Enter Mobile Number'}
-              </h3>
+              <motion.div 
+                className="flex justify-between items-center mb-4 sm:mb-6"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <h3 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  Get Started with {software.name}
+                </h3>
+                <motion.button
+                  onClick={() => setShowNumberPopup(false)}
+                  className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition"
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
+                >
+                  <X size={20} />
+                </motion.button>
+              </motion.div>
 
-              {!mobileConfirmed ? (
-                <>
-                  <input
-                    type="tel"
-                    placeholder="Enter mobile number"
-                    value={mobileNumber}
-                    onChange={(e) => setMobileNumber(e.target.value)}
-                    className="w-full border px-3 py-2 rounded-md text-sm mb-3"
-                  />
-                  <button
-                    onClick={checkMobileNumber}
-                    className="w-full bg-blue-500 text-white py-2 rounded-full text-sm font-semibold hover:bg-blue-600"
+              <motion.div 
+                className="space-y-4 sm:space-y-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                {/* Benefits Section */}
+                <motion.div 
+                  className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4"
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.4, type: 'spring', bounce: 0.3 }}
+                >
+                  <h4 className="font-semibold text-blue-700">Course Benefits:</h4>
+                  <ul className="space-y-2 sm:space-y-3">
+                    {[
+                      'Expert-led video tutorials',
+                      'Interactive learning materials',
+                      '24/7 access to course content',
+                      'Certificate upon completion'
+                    ].map((benefit, index) => (
+                      <motion.li 
+                        key={index}
+                        className="flex items-start gap-2 sm:gap-3"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.5 + index * 0.1 }}
+                      >
+                        <motion.span 
+                          className="text-green-500"
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
+                        >
+                          <Check className="w-5 h-5" />
+                        </motion.span>
+                        <span className="text-sm text-gray-700">{benefit}</span>
+                      </motion.li>
+                    ))}
+                  </ul>
+                </motion.div>
+
+                {/* Mobile Number Input */}
+                <motion.div 
+                  className="space-y-3 sm:space-y-4"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8 }}
+                >
+                  <motion.div 
+                    className="relative"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ type: 'spring', stiffness: 300 }}
                   >
-                    Check Now
-                  </button>
-                </>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-600 mb-2">Share this course with others:</p>
-                    <button
-                      onClick={() => {
-                        const currentUserId = getUserSession();
-                        const viewUrl = `${window.location.origin}/view-course/${currentUserId}/${software.id}`;
-                        navigator.clipboard.writeText(viewUrl)
-                          .then(() => alert('Course link copied to clipboard!'))
-                          .catch(() => alert('Failed to copy link'));
+                    <motion.input
+                      type="tel"
+                      placeholder="Enter your mobile number"
+                      value={mobileNumber}
+                      onChange={(e) => {
+                        const newValue = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setMobileNumber(newValue);
                       }}
-                      className="w-full bg-green-500 text-white py-2 rounded-full text-sm font-semibold hover:bg-green-600"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm sm:text-base"
+                      maxLength="10"
+                      pattern="[0-9]{10}"
+                      required
+                      animate={{
+                        borderColor: mobileNumber.length === 10 ? '#10B981' : '#E5E7EB',
+                        boxShadow: mobileNumber.length === 10 ? '0 0 0 2px rgba(16, 185, 129, 0.2)' : 'none'
+                      }}
+                      transition={{ duration: 0.3 }}
+                    />
+                    <motion.div 
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      animate={{ 
+                        scale: [1, 1.2, 1],
+                        rotate: [0, 10, -10, 0],
+                        color: mobileNumber.length === 10 ? '#10B981' : '#9CA3AF'
+                      }}
+                      transition={{ 
+                        duration: 2,
+                        repeat: Infinity,
+                        repeatType: "reverse"
+                      }}
                     >
-                      Copy Share Link
-                    </button>
-                  </div>
+                      📱
+                    </motion.div>
+                    
+                    {/* Digit Counter Animation */}
+                    <motion.div 
+                      className="absolute -bottom-4 sm:-bottom-6 right-3 sm:right-4 text-xs text-gray-500"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      <motion.span
+                        animate={{
+                          color: mobileNumber.length === 10 ? '#10B981' : '#6B7280',
+                          scale: mobileNumber.length === 10 ? [1, 1.2, 1] : 1
+                        }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        {mobileNumber.length}/10
+                      </motion.span>
+                    </motion.div>
 
-                  <button
-                    onClick={() => {
-                      setShowNumberPopup(false);
-                      setMobileConfirmed(false);
-                      setMobileNumber('');
+                    {/* Digit Entry Animation */}
+                    {mobileNumber.length > 0 && (
+                      <motion.div 
+                        className="absolute -top-8 sm:-top-12 left-0 right-0 flex justify-center gap-1 sm:gap-2"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        {Array.from(mobileNumber).map((digit, index) => (
+                          <motion.div
+                            key={index}
+                            className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold text-blue-600"
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ 
+                              scale: 1,
+                              opacity: 1,
+                              backgroundColor: mobileNumber.length === 10 ? '#D1FAE5' : '#EFF6FF',
+                              color: mobileNumber.length === 10 ? '#059669' : '#2563EB'
+                            }}
+                            transition={{ 
+                              type: 'spring',
+                              delay: index * 0.05,
+                              stiffness: 300
+                            }}
+                          >
+                            {digit}
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </motion.div>
+
+                  <motion.button
+                    onClick={checkMobileNumber}
+                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 sm:py-4 rounded-xl text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl transition-all"
+                    whileHover={{ 
+                      scale: 1.02,
+                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)"
                     }}
-                    className="w-full bg-gray-200 text-gray-700 py-2 rounded-full text-sm font-semibold hover:bg-gray-300"
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: 'spring', stiffness: 300 }}
+                    animate={{
+                      background: mobileNumber.length === 10 
+                        ? 'linear-gradient(to right, #10B981, #059669)'
+                        : 'linear-gradient(to right, #3B82F6, #2563EB)',
+                      scale: mobileNumber.length === 10 ? 1.02 : 1
+                    }}
                   >
-                    Close
-                  </button>
-                </div>
-              )}
+                    {mobileNumber.length === 10 ? 'Continue' : 'Enter 10 digits'}
+                  </motion.button>
+                </motion.div>
+              </motion.div>
 
               {mobileError && (
-                <p className="text-red-600 mt-3 text-sm text-center">{mobileError}</p>
+                <motion.p 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ type: 'spring', bounce: 0.3 }}
+                  className="text-red-500 mt-3 sm:mt-4 text-xs sm:text-sm text-center bg-red-50 p-2 sm:p-3 rounded-lg"
+                >
+                  {mobileError}
+                </motion.p>
               )}
             </motion.div>
           </>
