@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { getUserSession, setUserSession } from '../auth';
-import { database, ref, get, set } from '../firebase';
+import { database, ref, get, set, onValue } from '../firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { X, Check, ArrowRight, Star, Clock, Users } from 'lucide-react';
+import { X, Check, ArrowRight, Star, Clock, Users, Lock, Gift, User } from 'lucide-react';
 
 const SoftwareCard = ({ software }) => {
   const navigate = useNavigate();
@@ -18,27 +18,46 @@ const SoftwareCard = ({ software }) => {
   const [mobileConfirmed, setMobileConfirmed] = useState(false);
   const [showActivateView, setShowActivateView] = useState(false);
   const [walletPoints, setWalletPoints] = useState(0);
-
-  const handleBuyClick = () => {
-    const userId = getUserSession();
-    if (userId) {
-      setShowNumberPopup(true);
-    } else {
-      setShowLogin(true);
-    }
-  };
+  const [isBonusLocked, setIsBonusLocked] = useState(true);
 
   useEffect(() => {
-    const userId = getUserSession();
-    if (userId) {
-      const walletRef = ref(database, `users/${userId}/walletPoints`);
-      get(walletRef).then((snapshot) => {
+    const userSession = getUserSession();
+    if (userSession && userSession.userId) {
+      const userRef = ref(database, `users/${userSession.userId}`);
+      // Use onValue for real-time updates
+      const unsubscribe = onValue(userRef, (snapshot) => {
         if (snapshot.exists()) {
-          setWalletPoints(snapshot.val());
+          const data = snapshot.val();
+          setIsBonusLocked(!data.hasClaimedWelcomeBonus);
+          setWalletPoints(data.walletPoints || 0);
         }
       });
+      return () => unsubscribe(); // Cleanup listener
     }
   }, []);
+
+  const handleBuyClick = async () => {
+    const userSession = getUserSession();
+    if (!userSession || !userSession.userId) {
+      setShowLogin(true);
+      return;
+    }
+
+    // Check if wallet is locked
+    if (isBonusLocked) {
+      toast.error('Please unlock your wallet by paying ₹1000 to activate the course', {
+        icon: '🔒',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
+      });
+      return;
+    }
+
+    // If wallet is unlocked, proceed with course activation
+    setShowNumberPopup(true);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -357,7 +376,7 @@ const SoftwareCard = ({ software }) => {
         </div>
       </motion.div>
 
-      {/* Login Modal - Mobile Optimized */}
+      {/* Login Modal - Enhanced Design */}
       <AnimatePresence>
         {showLogin && (
           <>
@@ -373,50 +392,107 @@ const SoftwareCard = ({ software }) => {
               animate={{ y: '0%' }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', bounce: 0.2 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-lg z-50 p-4"
+              className="fixed bottom-24 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 p-6"
             >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-base font-bold text-blue-600">Login to Continue</h3>
-                <button
-                  onClick={() => setShowLogin(false)}
-                  className="text-gray-400 text-2xl font-bold p-2 -mr-2"
+              <div className="flex justify-between items-center mb-6">
+                <motion.div 
+                  className="flex items-center gap-3"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
                 >
-                  ×
-                </button>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    Login to Continue
+                  </h3>
+                </motion.div>
+                <motion.button
+                  onClick={() => setShowLogin(false)}
+                  className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition"
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X size={20} />
+                </motion.button>
               </div>
 
               {loginError && (
-                <p className="text-red-500 text-sm mb-3 text-center">{loginError}</p>
+                <motion.p 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-red-500 text-sm mb-4 text-center bg-red-50 p-3 rounded-lg"
+                >
+                  {loginError}
+                </motion.p>
               )}
 
-              <form onSubmit={handleLogin} className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Username"
-                  value={loginForm.username}
-                  onChange={(e) =>
-                    setLoginForm({ ...loginForm, username: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm"
-                  required
-                />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={loginForm.password}
-                  onChange={(e) =>
-                    setLoginForm({ ...loginForm, password: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm"
-                  required
-                />
-                <button
+              <form onSubmit={handleLogin} className="space-y-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Username"
+                    value={loginForm.username}
+                    onChange={(e) =>
+                      setLoginForm({ ...loginForm, username: e.target.value })
+                    }
+                    className="w-full border border-gray-200 px-4 py-3 rounded-xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                    required
+                  />
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={loginForm.password}
+                    onChange={(e) =>
+                      setLoginForm({ ...loginForm, password: e.target.value })
+                    }
+                    className="w-full border border-gray-200 px-4 py-3 rounded-xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                    required
+                  />
+                </motion.div>
+                <motion.button
                   type="submit"
-                  className="w-full bg-green-500 text-white py-2 rounded-full text-sm font-semibold hover:bg-green-600 transition"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-indigo-600 transition-all duration-200"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
                 >
                   Login
-                </button>
+                </motion.button>
               </form>
+
+              <motion.div 
+                className="mt-4 text-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+              >
+                <p className="text-sm text-gray-500">
+                  Don't have an account?{' '}
+                  <button
+                    onClick={() => {
+                      setShowLogin(false);
+                      navigate('/create-user/1');
+                    }}
+                    className="text-blue-500 hover:text-blue-600 font-medium"
+                  >
+                    Create one
+                  </button>
+                </p>
+              </motion.div>
             </motion.div>
           </>
         )}

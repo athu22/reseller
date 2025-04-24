@@ -39,7 +39,9 @@ const UserForm = ({ softwareId }) => {
       const user = snapshot.val();
 
       if (user && user.password === loginForm.password) {
-        setUserSession(phone);
+        // Set user session with role
+        setUserSession(phone, user.role || 'user');
+        
         toast.success('Login successful!', {
           icon: '👋',
           style: {
@@ -47,6 +49,8 @@ const UserForm = ({ softwareId }) => {
             color: '#fff',
           },
         });
+
+        // Redirect all users to home page
         navigate('/');
       } else {
         toast.error('Invalid phone number or password', {

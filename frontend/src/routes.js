@@ -13,19 +13,64 @@ import EnglishCourseLandingPage from './pages/course-landing-pages/EnglishCourse
 import ComputerCourseLandingPage from './pages/course-landing-pages/ComputerCourseLandingPage';
 import AndroidCourseLandingPage from './pages/course-landing-pages/AndroidCourseLandingPage';
 import BasicComputerCourseLandingPage from './pages/course-landing-pages/BasicComputerCourseLandingPage';
+import AddProduct from './pages/AddProduct';
+import ProtectedRoute from './components/ProtectedRoute';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 const AppRoutes = () => (
   <BrowserRouter>
     <Routes>
       <Route element={<MainLayout />}>
-        <Route path="/" element={<Home />} />
+        {/* Public Routes */}
         <Route path="/create-user/:softwareId" element={<CreateUser />} />
         <Route path="/activation/:userId/:softwareId" element={<Activation />} />
-        <Route path="/wallet/:userId" element={<WalletPage />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/editable-page/:userId" element={<ResellerLandingPage />} />
-        <Route path="/course-page/:courseType/:courseId" element={<CourseLandingPage />} />
+        
+        {/* Protected Routes */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Home />
+          </ProtectedRoute>
+        } />
+        <Route path="/wallet/:userId" element={
+          <ProtectedRoute>
+            <WalletPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        } />
+        <Route path="/editable-page/:userId" element={
+          <ProtectedRoute>
+            <ResellerLandingPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/course-page/:courseType/:courseId" element={
+          <ProtectedRoute>
+            <CourseLandingPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/add-product" element={
+          <ProtectedRoute>
+            <AddProduct />
+          </ProtectedRoute>
+        } />
+        
+        {/* Admin Routes */}
+        <Route path="/admin/dashboard" element={
+          <ProtectedRoute allowedRoles={['super_admin']}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/profile" element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <Profile />
+          </ProtectedRoute>
+        } />
       </Route>
+      
+      {/* View Routes */}
       <Route path="/view-landing/:userId" element={<ViewResellerLandingPage />} />
       <Route path="/view-course/:userId/:courseId" element={<ViewCourseLandingPage />} />
       <Route path="/view-english-course/:userId/:courseId" element={<EnglishCourseLandingPage />} />
