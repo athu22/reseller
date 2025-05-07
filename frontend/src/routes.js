@@ -16,21 +16,23 @@ import BasicComputerCourseLandingPage from './pages/course-landing-pages/BasicCo
 import AddProduct from './pages/AddProduct';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import ProductDetails from './pages/ProductDetails';
+import AdminProductDetails from './pages/AdminProductDetails';
+import AdminProducts from './pages/AdminProducts';
 
 const AppRoutes = () => (
-  <BrowserRouter>
+  <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <Routes>
       <Route element={<MainLayout />}>
         {/* Public Routes */}
+        <Route path="/" element={<Home />} />
         <Route path="/create-user/:softwareId" element={<CreateUser />} />
         <Route path="/activation/:userId/:softwareId" element={<Activation />} />
+        <Route path="/add-product" element={<AddProduct />} />
+        <Route path="/product/:productId" element={<ProductDetails />} />
+        <Route path="/admin-products" element={<AdminProducts />} />
         
         {/* Protected Routes */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Home />
-          </ProtectedRoute>
-        } />
         <Route path="/wallet/:userId" element={
           <ProtectedRoute>
             <WalletPage />
@@ -51,11 +53,6 @@ const AppRoutes = () => (
             <CourseLandingPage />
           </ProtectedRoute>
         } />
-        <Route path="/add-product" element={
-          <ProtectedRoute>
-            <AddProduct />
-          </ProtectedRoute>
-        } />
         
         {/* Admin Routes */}
         <Route path="/admin/dashboard" element={
@@ -68,6 +65,7 @@ const AppRoutes = () => (
             <Profile />
           </ProtectedRoute>
         } />
+        <Route path="/admin-product/:adminId/:productId" element={<AdminProductDetails />} />
       </Route>
       
       {/* View Routes */}

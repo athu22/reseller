@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { setUserSession } from '../auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { Github, Mail, Lock, User as UserIcon, ArrowLeft } from 'lucide-react';
+import { Github, Mail, Lock, User as UserIcon, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 const UserForm = ({ softwareId }) => {
   const [form, setForm] = useState({ username: '', password: '', phone: '' });
@@ -16,6 +16,8 @@ const UserForm = ({ softwareId }) => {
   const [loginError, setLoginError] = useState('');
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [showUserInfo, setShowUserInfo] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -39,6 +41,28 @@ const UserForm = ({ softwareId }) => {
       const user = snapshot.val();
 
       if (user && user.password === loginForm.password) {
+        // Check if user is an admin and if they are active
+        if (user.role === 'admin') {
+          // Get the super admin's ID who created this admin
+          const superAdminId = user.createdBy;
+          if (superAdminId) {
+            // Check admin's status in super admin's admins list
+            const adminStatusSnapshot = await get(ref(database, `users/${superAdminId}/admins/${phone}`));
+            const adminStatus = adminStatusSnapshot.val();
+            
+            if (!adminStatus || !adminStatus.isActive) {
+              toast.error('Your admin account is inactive. Please contact the super admin.', {
+                icon: '❌',
+                style: {
+                  background: '#EF4444',
+                  color: '#fff',
+                },
+              });
+              return;
+            }
+          }
+        }
+
         // Set user session with role
         setUserSession(phone, user.role || 'user');
         
@@ -226,13 +250,20 @@ const UserForm = ({ softwareId }) => {
                       </div>
                       <input
                         name="password"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder="Password"
                         value={loginForm.password}
                         onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
                     </div>
                   </div>
 
@@ -296,19 +327,54 @@ const UserForm = ({ softwareId }) => {
                       />
                     </div>
 
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <Mail className="w-4 h-4 mr-2 text-blue-600" />
+                        Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Password"
+                          value={form.password}
+                          onChange={handleChange}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
                       </div>
-                      <input
-                        name="password"
-                        type="password"
-                        placeholder="Password"
-                        value={form.password}
-                        onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <Mail className="w-4 h-4 mr-2 text-blue-600" />
+                        Confirm Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          name="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirm password"
+                          value={form.confirmPassword}
+                          onChange={handleChange}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
 

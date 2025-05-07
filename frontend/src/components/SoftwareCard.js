@@ -36,6 +36,10 @@ const SoftwareCard = ({ software }) => {
     }
   }, []);
 
+  const handleCardClick = () => {
+    navigate(`/product/${software.id}`);
+  };
+
   const handleBuyClick = async () => {
     const userSession = getUserSession();
     if (!userSession || !userSession.userId) {
@@ -259,7 +263,8 @@ const SoftwareCard = ({ software }) => {
       <motion.div
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col w-full max-w-sm mx-auto overflow-hidden"
+        onClick={handleCardClick}
+        className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col w-full max-w-sm mx-auto overflow-hidden cursor-pointer"
       >
         <div className="relative aspect-video group">
           <img
@@ -338,6 +343,7 @@ const SoftwareCard = ({ software }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
+            onClick={(e) => e.stopPropagation()}
           >
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -353,7 +359,8 @@ const SoftwareCard = ({ software }) => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   const currentUserId = getUserSession();
                   if (!currentUserId) {
                     setShowLogin(true);

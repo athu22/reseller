@@ -46,24 +46,38 @@ const Home = () => {
         const userSession = getUserSession();
         if (!userSession || !userSession.userId) return;
 
-        const userRef = ref(database, `users/${userSession.userId}`);
-        const userSnapshot = await get(userRef);
-        const userData = userSnapshot.val();
+        // Get all users to find all admins
+        const usersRef = ref(database, 'users');
+        const usersSnapshot = await get(usersRef);
+        const usersData = usersSnapshot.val();
         
-        if (!userData || !userData.phone) return;
+        if (!usersData) return;
 
-        const mobileNumber = userData.phone;
-        const productsRef = ref(database, `users/${mobileNumber}/products/physicalProduct`);
-        const productsSnapshot = await get(productsRef);
-        
-        if (productsSnapshot.exists()) {
-          const products = productsSnapshot.val();
-          const productsArray = Object.entries(products).map(([id, data]) => ({
-            id,
-            ...data
-          }));
-          setPhysicalProducts(productsArray);
+        let allProducts = [];
+
+        // Iterate through all users to find admins and their products
+        for (const [userId, userData] of Object.entries(usersData)) {
+          if (userData.role === 'admin' || userData.role === 'super_admin') {
+            const productsRef = ref(database, `users/${userId}/products/physicalProduct`);
+            const productsSnapshot = await get(productsRef);
+            
+            if (productsSnapshot.exists()) {
+              const products = productsSnapshot.val();
+              const productsArray = Object.entries(products)
+                .map(([id, data]) => ({
+                  id,
+                  ...data,
+                  adminId: userId
+                }));
+              
+              // Only add approved products
+              const approvedProducts = productsArray.filter(product => product.status === 'approved');
+              allProducts = [...allProducts, ...approvedProducts];
+            }
+          }
         }
+            
+        setPhysicalProducts(allProducts);
       } catch (error) {
         console.error('Error fetching physical products:', error);
       } finally {
@@ -252,7 +266,7 @@ const Home = () => {
           <AnimatePresence mode="wait">
             {activeTab === 'digital' ? (
               <motion.div
-                key="digital"
+                key="digital-tab"
                 variants={tabVariants}
                 initial="hidden"
                 animate="visible"
@@ -262,7 +276,7 @@ const Home = () => {
                 <AnimatePresence>
                   {filteredSoftware.map((software) => (
                     <motion.div
-                      key={software.id}
+                      key={`software-${software.id}`}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
@@ -277,7 +291,7 @@ const Home = () => {
               </motion.div>
             ) : (
               <motion.div
-                key="physical"
+                key="physical-tab"
                 variants={tabVariants}
                 initial="hidden"
                 animate="visible"
@@ -298,75 +312,71 @@ const Home = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {filteredPhysicalProducts.map((product) => (
                         <motion.div
-                          key={product.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          transition={{ duration: 0.3 }}
+                          key={`product-${product.adminId}-${product.id}`}
                           whileHover={{ scale: 1.02 }}
-                          className="cursor-pointer group"
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => navigate(`/admin-product/${product.adminId}/${product.id}`)}
+                          className="bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
                         >
-                          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border border-gray-100">
-                            <div className="relative aspect-[4/3]">
-                              {product.images && product.images.length > 0 ? (
-                                <img
-                                  src={product.images[0]}
-                                  alt={product.name}
-                                  className="w-full h-full object-cover cursor-pointer"
-                                  onClick={() => openGallery(product, 0)}
-                                  onError={handleImageError}
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                  <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                </div>
-                              )}
-                              {product.images && product.images.length > 1 && (
-                                <div 
-                                  className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full cursor-pointer hover:bg-black/70 transition-colors"
-                                  onClick={() => openGallery(product, 0)}
+                          <div className="relative aspect-[4/3]">
+                            {product.images && product.images.length > 0 ? (
+                              <img
+                                src={product.images[0]}
+                                alt={product.name}
+                                className="w-full h-full object-cover cursor-pointer"
+                                onClick={() => openGallery(product, 0)}
+                                onError={handleImageError}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                            )}
+                            {product.images && product.images.length > 1 && (
+                              <div 
+                                className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full cursor-pointer hover:bg-black/70 transition-colors"
+                                onClick={() => openGallery(product, 0)}
+                              >
+                                +{product.images.length - 1}
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="text-base font-medium text-gray-800 line-clamp-2 flex-1">
+                                {product.name}
+                              </h3>
+                              <span className="text-lg font-bold text-blue-600 whitespace-nowrap">
+                                ₹{product.price}
+                              </span>
+                            </div>
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                {product.category}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(product.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-gray-600 line-clamp-2">
+                              {product.description}
+                            </p>
+                            {userPhone && (
+                              <div className="mt-3 flex items-center justify-between">
+                                <span className="text-sm text-gray-500">
+                                  Contact: {userPhone}
+                                </span>
+                                <button
+                                  onClick={handleCall}
+                                  className="flex items-center gap-1 bg-green-500 text-white px-3 py-1.5 rounded-full text-sm hover:bg-green-600 transition-colors"
                                 >
-                                  +{product.images.length - 1}
-                                </div>
-                              )}
-                            </div>
-                            <div className="p-3">
-                              <div className="flex items-start justify-between gap-2">
-                                <h3 className="text-base font-medium text-gray-800 line-clamp-2 flex-1">
-                                  {product.name}
-                                </h3>
-                                <span className="text-lg font-bold text-blue-600 whitespace-nowrap">
-                                  ₹{product.price}
-                                </span>
+                                  <Phone size={16} />
+                                  Call
+                                </button>
                               </div>
-                              <div className="mt-2 flex items-center gap-2">
-                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                  {product.category}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {new Date(product.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-                                {product.description}
-                              </p>
-                              {userPhone && (
-                                <div className="mt-3 flex items-center justify-between">
-                                  <span className="text-sm text-gray-500">
-                                    Contact: {userPhone}
-                                  </span>
-                                  <button
-                                    onClick={handleCall}
-                                    className="flex items-center gap-1 bg-green-500 text-white px-3 py-1.5 rounded-full text-sm hover:bg-green-600 transition-colors"
-                                  >
-                                    <Phone size={16} />
-                                    Call
-                                  </button>
-                                </div>
-                              )}
-                            </div>
+                            )}
                           </div>
                         </motion.div>
                       ))}

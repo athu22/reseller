@@ -291,33 +291,35 @@ const MainLayout = () => {
           onClick={() => navigate('/')}
         />
         {userId ? (
-          <NavButton
-            icon={
-              <motion.div
-                className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg relative"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
+          userSession.role === 'admin' ? (
+            <NavButton
+              icon={
                 <motion.div
-                  className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-50 blur-md"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.5, 0.8, 0.5],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                />
-                <Plus size={28} className="text-white relative z-10" />
-              </motion.div>
-            }
-            label="Add"
-            active={location.pathname === '/add-product'}
-            onClick={() => navigate('/add-product')}
-            isSpecial={true}
-          />
+                  className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg relative"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-50 blur-md"
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      opacity: [0.5, 0.8, 0.5],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  />
+                  <Plus size={28} className="text-white relative z-10" />
+                </motion.div>
+              }
+              label="My Store"
+              active={location.pathname === '/add-product'}
+              onClick={() => navigate('/add-product')}
+              isSpecial={true}
+            />
+          ) : null
         ) : (
           <NavButton
             icon={<UserPlus size={24} />}
