@@ -12,10 +12,11 @@ const Home = () => {
   const [activeTab, setActiveTab] = useState('digital');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [physicalProducts, setPhysicalProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [userPhone, setUserPhone] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [hasLoadedPhysical, setHasLoadedPhysical] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -40,53 +41,57 @@ const Home = () => {
     fetchUserData();
   }, []);
 
-  useEffect(() => {
-    const fetchPhysicalProducts = async () => {
-      try {
-        const userSession = getUserSession();
-        if (!userSession || !userSession.userId) return;
+  const fetchPhysicalProducts = async () => {
+    try {
+      setIsLoading(true);
+      const userSession = getUserSession();
+      if (!userSession || !userSession.userId) return;
 
-        // Get all users to find all admins
-        const usersRef = ref(database, 'users');
-        const usersSnapshot = await get(usersRef);
-        const usersData = usersSnapshot.val();
-        
-        if (!usersData) return;
+      const productsRef = ref(database, 'users');
+      const snapshot = await get(productsRef);
+      const usersData = snapshot.val();
+      
+      if (!usersData) return;
 
-        let allProducts = [];
+      let products = [];
 
-        // Iterate through all users to find admins and their products
-        for (const [userId, userData] of Object.entries(usersData)) {
-          if (userData.role === 'admin' || userData.role === 'super_admin') {
-            const productsRef = ref(database, `users/${userId}/products/physicalProduct`);
-            const productsSnapshot = await get(productsRef);
-            
-            if (productsSnapshot.exists()) {
-              const products = productsSnapshot.val();
-              const productsArray = Object.entries(products)
-                .map(([id, data]) => ({
-                  id,
-                  ...data,
-                  adminId: userId
-                }));
-              
-              // Only add approved products
-              const approvedProducts = productsArray.filter(product => product.status === 'approved');
-              allProducts = [...allProducts, ...approvedProducts];
-            }
-          }
+      // Process data in memory instead of making multiple database calls
+      Object.entries(usersData).forEach(([userId, userData]) => {
+        if (userData.role === 'admin' || userData.role === 'super_admin') {
+          const userProducts = userData.products?.physicalProduct || {};
+          
+          // Convert products object to array and filter approved products
+          const approvedProducts = Object.entries(userProducts)
+            .filter(([_, product]) => product.status === 'approved')
+            .map(([id, data]) => ({
+              id,
+              ...data,
+              adminId: userId
+            }));
+          
+          products = [...products, ...approvedProducts];
         }
-            
-        setPhysicalProducts(allProducts);
-      } catch (error) {
-        console.error('Error fetching physical products:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      });
 
-    fetchPhysicalProducts();
-  }, []);
+      // Sort products by date (newest first)
+      products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      setPhysicalProducts(products);
+      setHasLoadedPhysical(true);
+    } catch (error) {
+      console.error('Error fetching physical products:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle tab change
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'physical' && !hasLoadedPhysical) {
+      fetchPhysicalProducts();
+    }
+  };
 
   const filteredSoftware = softwareList.filter((software) =>
     software.name.toLowerCase().includes(search.toLowerCase())
@@ -230,14 +235,13 @@ const Home = () => {
                 {['digital', 'physical'].map((tab) => (
                   <motion.button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => handleTabChange(tab)}
                     className={`relative flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all duration-300 ${
                       activeTab === tab 
                         ? 'text-white font-semibold' 
                         : 'text-gray-600 hover:text-gray-800'
                     }`}
                   >
-                    {/* {tab === 'digital' ? 'Digital Products' : 'Physical Products'} */}
                     {activeTab === tab && (
                       <motion.div
                         layoutId="activeTab"
@@ -363,20 +367,26 @@ const Home = () => {
                             <p className="mt-2 text-sm text-gray-600 line-clamp-2">
                               {product.description}
                             </p>
-                            {userPhone && (
-                              <div className="mt-3 flex items-center justify-between">
-                                <span className="text-sm text-gray-500">
-                                  Contact: {userPhone}
-                                </span>
-                                <button
-                                  onClick={handleCall}
-                                  className="flex items-center gap-1 bg-green-500 text-white px-3 py-1.5 rounded-full text-sm hover:bg-green-600 transition-colors"
-                                >
-                                  <Phone size={16} />
-                                  Call
-                                </button>
-                              </div>
-                            )}
+                            <div className="mt-3 flex items-center gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/buy-product/${product.adminId}/${product.id}`);
+                                }}
+                                className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                              >
+                                Buy Now
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/sell-product/${product.adminId}/${product.id}`);
+                                }}
+                                className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
+                              >
+                                Sell Now
+                              </button>
+                            </div>
                           </div>
                         </motion.div>
                       ))}

@@ -19,6 +19,8 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import ProductDetails from './pages/ProductDetails';
 import AdminProductDetails from './pages/AdminProductDetails';
 import AdminProducts from './pages/AdminProducts';
+import BuyProduct from './pages/BuyProduct';
+import Orders from './pages/Orders';
 
 const AppRoutes = () => (
   <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -31,6 +33,7 @@ const AppRoutes = () => (
         <Route path="/add-product" element={<AddProduct />} />
         <Route path="/product/:productId" element={<ProductDetails />} />
         <Route path="/admin-products" element={<AdminProducts />} />
+        <Route path="/buy-product/:adminId/:productId" element={<BuyProduct />} />
         
         {/* Protected Routes */}
         <Route path="/wallet/:userId" element={
@@ -41,6 +44,11 @@ const AppRoutes = () => (
         <Route path="/profile" element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        } />
+        <Route path="/orders" element={
+          <ProtectedRoute>
+            <Orders />
           </ProtectedRoute>
         } />
         <Route path="/editable-page/:userId" element={

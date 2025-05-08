@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { database, ref, get, onValue, set } from '../firebase';
+import { database, ref, get, onValue, set, push } from '../firebase';
 import { getUserSession } from '../auth';
 import { toast } from 'react-hot-toast';
 import { Star, Users, Clock, Check, X, Share2, Heart, ArrowRight, Truck, Shield, Image as ImageIcon } from 'lucide-react';
@@ -73,13 +73,47 @@ const AdminProductDetails = () => {
     return () => unsubscribe();
   }, [adminId, productId, navigate, product?.name]);
 
-  const handleBuyClick = () => {
+  const handleBuyClick = async () => {
     const userSession = getUserSession();
     if (!userSession || !userSession.userId) {
       setShowLogin(true);
       return;
     }
-    setShowNumberPopup(true);
+
+    try {
+      // Get user data
+      const userRef = ref(database, `users/${userSession.userId}`);
+      const userSnapshot = await get(userRef);
+      const userData = userSnapshot.val();
+
+      if (!userData) {
+        toast.error('User data not found');
+        return;
+      }
+
+      // Create order request in admin's notifications
+      const notificationRef = ref(database, `users/${adminId}/notifications`);
+      const newNotificationRef = push(notificationRef);
+      await set(newNotificationRef, {
+        type: 'order_request',
+        productId,
+        productName: product.name,
+        price: product.price,
+        category: product.category,
+        images: product.images,
+        buyerId: userSession.userId,
+        buyerName: userData.username,
+        buyerPhone: userData.phone,
+        createdAt: new Date().toISOString(),
+        status: 'pending'
+      });
+
+      toast.success('Order request sent successfully!');
+      setShowNumberPopup(true);
+    } catch (error) {
+      console.error('Error creating order request:', error);
+      toast.error('Failed to create order request');
+    }
   };
 
   const handleShare = async () => {
@@ -247,7 +281,7 @@ const AdminProductDetails = () => {
 
               <div className="pt-4 space-y-4">
                 <button
-                  onClick={handleBuyClick}
+                  onClick={() => navigate(`/buy-product/${adminId}/${productId}`)}
                   className="w-full bg-blue-600 text-white px-6 py-4 rounded-md text-lg font-semibold shadow-sm hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
                 >
                   Buy Now

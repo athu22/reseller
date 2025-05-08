@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { database, ref, get, set,  update } from '../firebase';
+import { database, ref, get, set,  update, push } from '../firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getUserSession } from '../auth';
 import { toast } from 'react-hot-toast';
-import {  Edit2, Users, Camera,  X, Gift, BarChart2, Settings, Bell, Shield, ChevronDown, ArrowLeft, PlusCircle } from 'lucide-react';
+import {  Edit2, Users, Camera,  X, Gift, BarChart2, Settings, Bell, Shield, ChevronDown, ArrowLeft, PlusCircle, ShoppingBag } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import DefaultAvatar from '../components/DefaultAvatar';
@@ -685,12 +685,94 @@ const Profile = () => {
                   </div>
                 </div>
               )}
+
+              {notification.type === 'order_request' && (
+                <div className="flex items-start gap-4">
+                  <div className="w-24 h-24 flex-shrink-0">
+                    <img
+                      src={notification.images?.[0]}
+                      alt={notification.productName}
+                      className="w-full h-full object-cover rounded-lg shadow-sm"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="font-semibold text-gray-800">{notification.productName}</h4>
+                        <p className="text-sm text-gray-600">₹{notification.price}</p>
+                        <p className="text-xs text-gray-500 mt-1">Buyer: {notification.buyerName}</p>
+                        <p className="text-xs text-gray-500">Phone: {notification.buyerPhone}</p>
+                      </div>
+                      <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                        New Order
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleOrderApproval(notification.id, notification.buyerId, notification.productId, true)}
+                        className="flex-1 bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600 transition shadow-sm"
+                      >
+                        Accept
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleOrderApproval(notification.id, notification.buyerId, notification.productId, false)}
+                        className="flex-1 bg-red-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-600 transition shadow-sm"
+                      >
+                        Reject
+                      </motion.button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           ))}
         </div>
       )}
     </div>
   );
+
+  const handleOrderApproval = async (notificationId, buyerId, productId, approve) => {
+    try {
+      // Update notification status
+      const notificationRef = ref(database, `users/${userId}/notifications/${notificationId}`);
+      await update(notificationRef, { status: approve ? 'approved' : 'rejected' });
+
+      // Create order in admin's orders collection
+      const orderRef = ref(database, `users/${userId}/orders`);
+      const newOrderRef = push(orderRef);
+      await set(newOrderRef, {
+        productId,
+        buyerId,
+        status: approve ? 'accepted' : 'rejected',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      // Create notification for buyer
+      const buyerNotificationRef = ref(database, `users/${buyerId}/notifications`);
+      const newBuyerNotificationRef = push(buyerNotificationRef);
+      await set(newBuyerNotificationRef, {
+        type: 'order_status',
+        status: approve ? 'accepted' : 'rejected',
+        createdAt: new Date().toISOString()
+      });
+
+      toast.success(`Order ${approve ? 'accepted' : 'rejected'} successfully!`);
+      
+      // Remove the notification
+      await set(notificationRef, null);
+      
+      // Update local state
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    } catch (error) {
+      console.error('Error handling order approval:', error);
+      toast.error('Failed to process order');
+    }
+  };
 
   // Admin View
   if (userRole === 'admin') {
@@ -877,13 +959,13 @@ const Profile = () => {
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-lg transition"
-                  onClick={() => navigate('/wallet/' + userId)}
+                  onClick={() => navigate('/orders')}
                 >
                   <div className="p-3 bg-purple-100 rounded-full mb-4">
-                    <Gift className="w-8 h-8 text-purple-600" />
+                    <ShoppingBag className="w-8 h-8 text-purple-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Wallet</h3>
-                  <p className="text-sm text-gray-600">Manage wallet and transactions</p>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Orders</h3>
+                  <p className="text-sm text-gray-600">View and manage orders</p>
                 </motion.div>
               </div>
 
@@ -1514,18 +1596,18 @@ const Profile = () => {
                       className="mt-0"
                     >
                       <div className="flex justify-between items-center mb-4">
-                        <motion.button
+                                <motion.button
                           onClick={() => setViewMode('default')}
                           className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
                         >
                           <ArrowLeft className="w-4 h-4" />
                           Back
-                        </motion.button>
+                                </motion.button>
                         <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
-                      </div>
-                      
+                              </div>
+                              
                       <div className="bg-white rounded-lg shadow-md p-4">
                         {loadingNotifications ? (
                           <div className="text-center py-4">
@@ -1584,6 +1666,55 @@ const Profile = () => {
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             handleProductApproval(notification.id, notification.adminId, notification.productId, false);
+                                          }}
+                                          className="flex-1 bg-red-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-600 transition shadow-sm"
+                                        >
+                                          Reject
+                                        </motion.button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {notification.type === 'order_request' && (
+                                  <div className="flex items-start gap-4">
+                                    <div className="w-24 h-24 flex-shrink-0">
+                                      <img
+                                        src={notification.images?.[0]}
+                                        alt={notification.productName}
+                                        className="w-full h-full object-cover rounded-lg shadow-sm"
+                                      />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                          <h4 className="font-semibold text-gray-800">{notification.productName}</h4>
+                                          <p className="text-sm text-gray-600">₹{notification.price}</p>
+                                          <p className="text-xs text-gray-500 mt-1">Buyer: {notification.buyerName}</p>
+                                          <p className="text-xs text-gray-500">Phone: {notification.buyerPhone}</p>
+                                        </div>
+                                        <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                                          New Order
+                                        </span>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <motion.button
+                                          whileHover={{ scale: 1.02 }}
+                                          whileTap={{ scale: 0.98 }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleOrderApproval(notification.id, notification.buyerId, notification.productId, true);
+                                          }}
+                                          className="flex-1 bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600 transition shadow-sm"
+                                        >
+                                          Accept
+                                        </motion.button>
+                                        <motion.button
+                                          whileHover={{ scale: 1.02 }}
+                                          whileTap={{ scale: 0.98 }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleOrderApproval(notification.id, notification.buyerId, notification.productId, false);
                                           }}
                                           className="flex-1 bg-red-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-600 transition shadow-sm"
                                         >
@@ -1717,7 +1848,7 @@ const Profile = () => {
                                     </div>
                                   </div>
                                 </div>
-                              </div>
+                      </div>
                             </motion.div>
                           </>
                         )}
